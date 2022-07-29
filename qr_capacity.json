@@ -1,0 +1,1362 @@
+{
+  "1": {
+    "Version": "1",
+    "Modules": "21x21",
+    "Capacity": {
+      "L": {
+        "Databits": "152",
+        "Numeric": "41",
+        "Alphanumeric": "25",
+        "Binary": "17",
+        "Kanji": "10"
+      },
+      "M": {
+        "Databits": "128",
+        "Numeric": "34",
+        "Alphanumeric": "20",
+        "Binary": "14",
+        "Kanji": "8"
+      },
+      "Q": {
+        "Databits": "104",
+        "Numeric": "27",
+        "Alphanumeric": "16",
+        "Binary": "11",
+        "Kanji": "7"
+      },
+      "H": {
+        "Databits": "72",
+        "Numeric": "17",
+        "Alphanumeric": "10",
+        "Binary": "7",
+        "Kanji": "4"
+      }
+    }
+  },
+  "2": {
+    "Version": "2",
+    "Modules": "25x25",
+    "Capacity": {
+      "L": {
+        "Databits": "272",
+        "Numeric": "77",
+        "Alphanumeric": "47",
+        "Binary": "32",
+        "Kanji": "20"
+      },
+      "M": {
+        "Databits": "224",
+        "Numeric": "63",
+        "Alphanumeric": "38",
+        "Binary": "26",
+        "Kanji": "16"
+      },
+      "Q": {
+        "Databits": "176",
+        "Numeric": "48",
+        "Alphanumeric": "29",
+        "Binary": "20",
+        "Kanji": "12"
+      },
+      "H": {
+        "Databits": "128",
+        "Numeric": "34",
+        "Alphanumeric": "20",
+        "Binary": "14",
+        "Kanji": "8"
+      }
+    }
+  },
+  "3": {
+    "Version": "3",
+    "Modules": "29x29",
+    "Capacity": {
+      "L": {
+        "Databits": "440",
+        "Numeric": "127",
+        "Alphanumeric": "77",
+        "Binary": "53",
+        "Kanji": "32"
+      },
+      "M": {
+        "Databits": "352",
+        "Numeric": "101",
+        "Alphanumeric": "61",
+        "Binary": "42",
+        "Kanji": "26"
+      },
+      "Q": {
+        "Databits": "272",
+        "Numeric": "77",
+        "Alphanumeric": "47",
+        "Binary": "32",
+        "Kanji": "20"
+      },
+      "H": {
+        "Databits": "208",
+        "Numeric": "58",
+        "Alphanumeric": "35",
+        "Binary": "24",
+        "Kanji": "15"
+      }
+    }
+  },
+  "4": {
+    "Version": "4",
+    "Modules": "33x33",
+    "Capacity": {
+      "L": {
+        "Databits": "640",
+        "Numeric": "187",
+        "Alphanumeric": "114",
+        "Binary": "78",
+        "Kanji": "48"
+      },
+      "M": {
+        "Databits": "512",
+        "Numeric": "149",
+        "Alphanumeric": "90",
+        "Binary": "62",
+        "Kanji": "38"
+      },
+      "Q": {
+        "Databits": "384",
+        "Numeric": "111",
+        "Alphanumeric": "67",
+        "Binary": "46",
+        "Kanji": "28"
+      },
+      "H": {
+        "Databits": "288",
+        "Numeric": "82",
+        "Alphanumeric": "50",
+        "Binary": "34",
+        "Kanji": "21"
+      }
+    }
+  },
+  "5": {
+    "Version": "5",
+    "Modules": "37x37",
+    "Capacity": {
+      "L": {
+        "Databits": "864",
+        "Numeric": "255",
+        "Alphanumeric": "154",
+        "Binary": "106",
+        "Kanji": "65"
+      },
+      "M": {
+        "Databits": "688",
+        "Numeric": "202",
+        "Alphanumeric": "122",
+        "Binary": "84",
+        "Kanji": "52"
+      },
+      "Q": {
+        "Databits": "496",
+        "Numeric": "144",
+        "Alphanumeric": "87",
+        "Binary": "60",
+        "Kanji": "37"
+      },
+      "H": {
+        "Databits": "368",
+        "Numeric": "106",
+        "Alphanumeric": "64",
+        "Binary": "44",
+        "Kanji": "27"
+      }
+    }
+  },
+  "6": {
+    "Version": "6",
+    "Modules": "41x41",
+    "Capacity": {
+      "L": {
+        "Databits": "1088",
+        "Numeric": "322",
+        "Alphanumeric": "195",
+        "Binary": "134",
+        "Kanji": "82"
+      },
+      "M": {
+        "Databits": "864",
+        "Numeric": "255",
+        "Alphanumeric": "154",
+        "Binary": "106",
+        "Kanji": "65"
+      },
+      "Q": {
+        "Databits": "608",
+        "Numeric": "178",
+        "Alphanumeric": "108",
+        "Binary": "74",
+        "Kanji": "45"
+      },
+      "H": {
+        "Databits": "480",
+        "Numeric": "139",
+        "Alphanumeric": "84",
+        "Binary": "58",
+        "Kanji": "36"
+      }
+    }
+  },
+  "7": {
+    "Version": "7",
+    "Modules": "45x45",
+    "Capacity": {
+      "L": {
+        "Databits": "1248",
+        "Numeric": "370",
+        "Alphanumeric": "224",
+        "Binary": "154",
+        "Kanji": "95"
+      },
+      "M": {
+        "Databits": "992",
+        "Numeric": "293",
+        "Alphanumeric": "178",
+        "Binary": "122",
+        "Kanji": "75"
+      },
+      "Q": {
+        "Databits": "704",
+        "Numeric": "207",
+        "Alphanumeric": "125",
+        "Binary": "86",
+        "Kanji": "53"
+      },
+      "H": {
+        "Databits": "528",
+        "Numeric": "154",
+        "Alphanumeric": "93",
+        "Binary": "64",
+        "Kanji": "39"
+      }
+    }
+  },
+  "8": {
+    "Version": "8",
+    "Modules": "49x49",
+    "Capacity": {
+      "L": {
+        "Databits": "1552",
+        "Numeric": "461",
+        "Alphanumeric": "279",
+        "Binary": "192",
+        "Kanji": "118"
+      },
+      "M": {
+        "Databits": "1232",
+        "Numeric": "365",
+        "Alphanumeric": "221",
+        "Binary": "152",
+        "Kanji": "93"
+      },
+      "Q": {
+        "Databits": "880",
+        "Numeric": "259",
+        "Alphanumeric": "157",
+        "Binary": "108",
+        "Kanji": "66"
+      },
+      "H": {
+        "Databits": "688",
+        "Numeric": "202",
+        "Alphanumeric": "122",
+        "Binary": "84",
+        "Kanji": "52"
+      }
+    }
+  },
+  "9": {
+    "Version": "9",
+    "Modules": "53x53",
+    "Capacity": {
+      "L": {
+        "Databits": "1856",
+        "Numeric": "552",
+        "Alphanumeric": "335",
+        "Binary": "230",
+        "Kanji": "141"
+      },
+      "M": {
+        "Databits": "1456",
+        "Numeric": "432",
+        "Alphanumeric": "262",
+        "Binary": "180",
+        "Kanji": "111"
+      },
+      "Q": {
+        "Databits": "1056",
+        "Numeric": "312",
+        "Alphanumeric": "189",
+        "Binary": "130",
+        "Kanji": "80"
+      },
+      "H": {
+        "Databits": "800",
+        "Numeric": "235",
+        "Alphanumeric": "143",
+        "Binary": "98",
+        "Kanji": "60"
+      }
+    }
+  },
+  "10": {
+    "Version": "10",
+    "Modules": "57x57",
+    "Capacity": {
+      "L": {
+        "Databits": "2192",
+        "Numeric": "652",
+        "Alphanumeric": "395",
+        "Binary": "271",
+        "Kanji": "167"
+      },
+      "M": {
+        "Databits": "1728",
+        "Numeric": "513",
+        "Alphanumeric": "311",
+        "Binary": "213",
+        "Kanji": "131"
+      },
+      "Q": {
+        "Databits": "1232",
+        "Numeric": "364",
+        "Alphanumeric": "221",
+        "Binary": "151",
+        "Kanji": "93"
+      },
+      "H": {
+        "Databits": "976",
+        "Numeric": "288",
+        "Alphanumeric": "174",
+        "Binary": "119",
+        "Kanji": "74"
+      }
+    }
+  },
+  "11": {
+    "Version": "11",
+    "Modules": "61x61",
+    "Capacity": {
+      "L": {
+        "Databits": "2592",
+        "Numeric": "772",
+        "Alphanumeric": "468",
+        "Binary": "321",
+        "Kanji": "198"
+      },
+      "M": {
+        "Databits": "2032",
+        "Numeric": "604",
+        "Alphanumeric": "366",
+        "Binary": "251",
+        "Kanji": "155"
+      },
+      "Q": {
+        "Databits": "1440",
+        "Numeric": "427",
+        "Alphanumeric": "259",
+        "Binary": "177",
+        "Kanji": "109"
+      },
+      "H": {
+        "Databits": "1120",
+        "Numeric": "331",
+        "Alphanumeric": "200",
+        "Binary": "137",
+        "Kanji": "85"
+      }
+    }
+  },
+  "12": {
+    "Version": "12",
+    "Modules": "65x65",
+    "Capacity": {
+      "L": {
+        "Databits": "2960",
+        "Numeric": "883",
+        "Alphanumeric": "535",
+        "Binary": "367",
+        "Kanji": "226"
+      },
+      "M": {
+        "Databits": "2320",
+        "Numeric": "691",
+        "Alphanumeric": "419",
+        "Binary": "287",
+        "Kanji": "177"
+      },
+      "Q": {
+        "Databits": "1648",
+        "Numeric": "489",
+        "Alphanumeric": "296",
+        "Binary": "203",
+        "Kanji": "125"
+      },
+      "H": {
+        "Databits": "1264",
+        "Numeric": "374",
+        "Alphanumeric": "227",
+        "Binary": "155",
+        "Kanji": "96"
+      }
+    }
+  },
+  "13": {
+    "Version": "13",
+    "Modules": "69x69",
+    "Capacity": {
+      "L": {
+        "Databits": "3424",
+        "Numeric": "1022",
+        "Alphanumeric": "619",
+        "Binary": "425",
+        "Kanji": "262"
+      },
+      "M": {
+        "Databits": "2672",
+        "Numeric": "796",
+        "Alphanumeric": "483",
+        "Binary": "331",
+        "Kanji": "204"
+      },
+      "Q": {
+        "Databits": "1952",
+        "Numeric": "580",
+        "Alphanumeric": "352",
+        "Binary": "241",
+        "Kanji": "149"
+      },
+      "H": {
+        "Databits": "1440",
+        "Numeric": "427",
+        "Alphanumeric": "259",
+        "Binary": "177",
+        "Kanji": "109"
+      }
+    }
+  },
+  "14": {
+    "Version": "14",
+    "Modules": "73x73",
+    "Capacity": {
+      "L": {
+        "Databits": "3688",
+        "Numeric": "1101",
+        "Alphanumeric": "667",
+        "Binary": "458",
+        "Kanji": "282"
+      },
+      "M": {
+        "Databits": "2920",
+        "Numeric": "871",
+        "Alphanumeric": "528",
+        "Binary": "362",
+        "Kanji": "223"
+      },
+      "Q": {
+        "Databits": "2088",
+        "Numeric": "621",
+        "Alphanumeric": "376",
+        "Binary": "258",
+        "Kanji": "159"
+      },
+      "H": {
+        "Databits": "1576",
+        "Numeric": "468",
+        "Alphanumeric": "283",
+        "Binary": "194",
+        "Kanji": "120"
+      }
+    }
+  },
+  "15": {
+    "Version": "15",
+    "Modules": "77x77",
+    "Capacity": {
+      "L": {
+        "Databits": "4184",
+        "Numeric": "1250",
+        "Alphanumeric": "758",
+        "Binary": "520",
+        "Kanji": "320"
+      },
+      "M": {
+        "Databits": "3320",
+        "Numeric": "991",
+        "Alphanumeric": "600",
+        "Binary": "412",
+        "Kanji": "254"
+      },
+      "Q": {
+        "Databits": "2360",
+        "Numeric": "703",
+        "Alphanumeric": "426",
+        "Binary": "292",
+        "Kanji": "180"
+      },
+      "H": {
+        "Databits": "1784",
+        "Numeric": "530",
+        "Alphanumeric": "321",
+        "Binary": "220",
+        "Kanji": "136"
+      }
+    }
+  },
+  "16": {
+    "Version": "16",
+    "Modules": "81x81",
+    "Capacity": {
+      "L": {
+        "Databits": "4712",
+        "Numeric": "1408",
+        "Alphanumeric": "854",
+        "Binary": "586",
+        "Kanji": "361"
+      },
+      "M": {
+        "Databits": "3624",
+        "Numeric": "1082",
+        "Alphanumeric": "656",
+        "Binary": "450",
+        "Kanji": "277"
+      },
+      "Q": {
+        "Databits": "2600",
+        "Numeric": "775",
+        "Alphanumeric": "470",
+        "Binary": "322",
+        "Kanji": "198"
+      },
+      "H": {
+        "Databits": "2024",
+        "Numeric": "602",
+        "Alphanumeric": "365",
+        "Binary": "250",
+        "Kanji": "154"
+      }
+    }
+  },
+  "17": {
+    "Version": "17",
+    "Modules": "85x85",
+    "Capacity": {
+      "L": {
+        "Databits": "5176",
+        "Numeric": "1548",
+        "Alphanumeric": "938",
+        "Binary": "644",
+        "Kanji": "397"
+      },
+      "M": {
+        "Databits": "4056",
+        "Numeric": "1212",
+        "Alphanumeric": "734",
+        "Binary": "504",
+        "Kanji": "310"
+      },
+      "Q": {
+        "Databits": "2936",
+        "Numeric": "876",
+        "Alphanumeric": "531",
+        "Binary": "364",
+        "Kanji": "224"
+      },
+      "H": {
+        "Databits": "2264",
+        "Numeric": "674",
+        "Alphanumeric": "408",
+        "Binary": "280",
+        "Kanji": "173"
+      }
+    }
+  },
+  "18": {
+    "Version": "18",
+    "Modules": "89x89",
+    "Capacity": {
+      "L": {
+        "Databits": "5768",
+        "Numeric": "1725",
+        "Alphanumeric": "1046",
+        "Binary": "718",
+        "Kanji": "442"
+      },
+      "M": {
+        "Databits": "4504",
+        "Numeric": "1346",
+        "Alphanumeric": "816",
+        "Binary": "560",
+        "Kanji": "345"
+      },
+      "Q": {
+        "Databits": "3176",
+        "Numeric": "948",
+        "Alphanumeric": "574",
+        "Binary": "394",
+        "Kanji": "243"
+      },
+      "H": {
+        "Databits": "2504",
+        "Numeric": "746",
+        "Alphanumeric": "452",
+        "Binary": "310",
+        "Kanji": "191"
+      }
+    }
+  },
+  "19": {
+    "Version": "19",
+    "Modules": "93x93",
+    "Capacity": {
+      "L": {
+        "Databits": "6360",
+        "Numeric": "1903",
+        "Alphanumeric": "1153",
+        "Binary": "792",
+        "Kanji": "488"
+      },
+      "M": {
+        "Databits": "5016",
+        "Numeric": "1500",
+        "Alphanumeric": "909",
+        "Binary": "624",
+        "Kanji": "384"
+      },
+      "Q": {
+        "Databits": "3560",
+        "Numeric": "1063",
+        "Alphanumeric": "644",
+        "Binary": "442",
+        "Kanji": "272"
+      },
+      "H": {
+        "Databits": "2728",
+        "Numeric": "813",
+        "Alphanumeric": "493",
+        "Binary": "338",
+        "Kanji": "208"
+      }
+    }
+  },
+  "20": {
+    "Version": "20",
+    "Modules": "97x97",
+    "Capacity": {
+      "L": {
+        "Databits": "6888",
+        "Numeric": "2061",
+        "Alphanumeric": "1249",
+        "Binary": "858",
+        "Kanji": "528"
+      },
+      "M": {
+        "Databits": "5352",
+        "Numeric": "1600",
+        "Alphanumeric": "970",
+        "Binary": "666",
+        "Kanji": "410"
+      },
+      "Q": {
+        "Databits": "3880",
+        "Numeric": "1159",
+        "Alphanumeric": "702",
+        "Binary": "482",
+        "Kanji": "297"
+      },
+      "H": {
+        "Databits": "3080",
+        "Numeric": "919",
+        "Alphanumeric": "557",
+        "Binary": "382",
+        "Kanji": "235"
+      }
+    }
+  },
+  "21": {
+    "Version": "21",
+    "Modules": "101x101",
+    "Capacity": {
+      "L": {
+        "Databits": "7456",
+        "Numeric": "2232",
+        "Alphanumeric": "1352",
+        "Binary": "929",
+        "Kanji": "572"
+      },
+      "M": {
+        "Databits": "5712",
+        "Numeric": "1708",
+        "Alphanumeric": "1035",
+        "Binary": "711",
+        "Kanji": "438"
+      },
+      "Q": {
+        "Databits": "4096",
+        "Numeric": "1224",
+        "Alphanumeric": "742",
+        "Binary": "509",
+        "Kanji": "314"
+      },
+      "H": {
+        "Databits": "3248",
+        "Numeric": "969",
+        "Alphanumeric": "587",
+        "Binary": "403",
+        "Kanji": "248"
+      }
+    }
+  },
+  "22": {
+    "Version": "22",
+    "Modules": "105x105",
+    "Capacity": {
+      "L": {
+        "Databits": "8048",
+        "Numeric": "2409",
+        "Alphanumeric": "1460",
+        "Binary": "1003",
+        "Kanji": "618"
+      },
+      "M": {
+        "Databits": "6256",
+        "Numeric": "1872",
+        "Alphanumeric": "1134",
+        "Binary": "779",
+        "Kanji": "480"
+      },
+      "Q": {
+        "Databits": "4544",
+        "Numeric": "1358",
+        "Alphanumeric": "823",
+        "Binary": "565",
+        "Kanji": "348"
+      },
+      "H": {
+        "Databits": "3536",
+        "Numeric": "1056",
+        "Alphanumeric": "640",
+        "Binary": "439",
+        "Kanji": "270"
+      }
+    }
+  },
+  "23": {
+    "Version": "23",
+    "Modules": "109x109",
+    "Capacity": {
+      "L": {
+        "Databits": "8752",
+        "Numeric": "2620",
+        "Alphanumeric": "1588",
+        "Binary": "1091",
+        "Kanji": "672"
+      },
+      "M": {
+        "Databits": "6880",
+        "Numeric": "2059",
+        "Alphanumeric": "1248",
+        "Binary": "857",
+        "Kanji": "528"
+      },
+      "Q": {
+        "Databits": "4912",
+        "Numeric": "1468",
+        "Alphanumeric": "890",
+        "Binary": "611",
+        "Kanji": "376"
+      },
+      "H": {
+        "Databits": "3712",
+        "Numeric": "1108",
+        "Alphanumeric": "672",
+        "Binary": "461",
+        "Kanji": "284"
+      }
+    }
+  },
+  "24": {
+    "Version": "24",
+    "Modules": "113x113",
+    "Capacity": {
+      "L": {
+        "Databits": "9392",
+        "Numeric": "2812",
+        "Alphanumeric": "1704",
+        "Binary": "1171",
+        "Kanji": "721"
+      },
+      "M": {
+        "Databits": "7312",
+        "Numeric": "2188",
+        "Alphanumeric": "1326",
+        "Binary": "911",
+        "Kanji": "561"
+      },
+      "Q": {
+        "Databits": "5312",
+        "Numeric": "1588",
+        "Alphanumeric": "963",
+        "Binary": "661",
+        "Kanji": "407"
+      },
+      "H": {
+        "Databits": "4112",
+        "Numeric": "1228",
+        "Alphanumeric": "744",
+        "Binary": "511",
+        "Kanji": "315"
+      }
+    }
+  },
+  "25": {
+    "Version": "25",
+    "Modules": "117x117",
+    "Capacity": {
+      "L": {
+        "Databits": "10208",
+        "Numeric": "3057",
+        "Alphanumeric": "1853",
+        "Binary": "1273",
+        "Kanji": "784"
+      },
+      "M": {
+        "Databits": "8000",
+        "Numeric": "2395",
+        "Alphanumeric": "1451",
+        "Binary": "997",
+        "Kanji": "614"
+      },
+      "Q": {
+        "Databits": "5744",
+        "Numeric": "1718",
+        "Alphanumeric": "1041",
+        "Binary": "715",
+        "Kanji": "440"
+      },
+      "H": {
+        "Databits": "4304",
+        "Numeric": "1286",
+        "Alphanumeric": "779",
+        "Binary": "535",
+        "Kanji": "330"
+      }
+    }
+  },
+  "26": {
+    "Version": "26",
+    "Modules": "121x121",
+    "Capacity": {
+      "L": {
+        "Databits": "10960",
+        "Numeric": "3283",
+        "Alphanumeric": "1990",
+        "Binary": "1367",
+        "Kanji": "842"
+      },
+      "M": {
+        "Databits": "8496",
+        "Numeric": "2544",
+        "Alphanumeric": "1542",
+        "Binary": "1059",
+        "Kanji": "652"
+      },
+      "Q": {
+        "Databits": "6032",
+        "Numeric": "1804",
+        "Alphanumeric": "1094",
+        "Binary": "751",
+        "Kanji": "462"
+      },
+      "H": {
+        "Databits": "4768",
+        "Numeric": "1425",
+        "Alphanumeric": "864",
+        "Binary": "593",
+        "Kanji": "365"
+      }
+    }
+  },
+  "27": {
+    "Version": "27",
+    "Modules": "125x125",
+    "Capacity": {
+      "L": {
+        "Databits": "11744",
+        "Numeric": "3517",
+        "Alphanumeric": "2132",
+        "Binary": "1465",
+        "Kanji": "902"
+      },
+      "M": {
+        "Databits": "9024",
+        "Numeric": "2701",
+        "Alphanumeric": "1637",
+        "Binary": "1125",
+        "Kanji": "692"
+      },
+      "Q": {
+        "Databits": "6464",
+        "Numeric": "1933",
+        "Alphanumeric": "1172",
+        "Binary": "805",
+        "Kanji": "496"
+      },
+      "H": {
+        "Databits": "5024",
+        "Numeric": "1501",
+        "Alphanumeric": "910",
+        "Binary": "625",
+        "Kanji": "385"
+      }
+    }
+  },
+  "28": {
+    "Version": "28",
+    "Modules": "129x129",
+    "Capacity": {
+      "L": {
+        "Databits": "12248",
+        "Numeric": "3669",
+        "Alphanumeric": "2223",
+        "Binary": "1528",
+        "Kanji": "940"
+      },
+      "M": {
+        "Databits": "9544",
+        "Numeric": "2857",
+        "Alphanumeric": "1732",
+        "Binary": "1190",
+        "Kanji": "732"
+      },
+      "Q": {
+        "Databits": "6968",
+        "Numeric": "2085",
+        "Alphanumeric": "1263",
+        "Binary": "868",
+        "Kanji": "534"
+      },
+      "H": {
+        "Databits": "5288",
+        "Numeric": "1581",
+        "Alphanumeric": "958",
+        "Binary": "658",
+        "Kanji": "405"
+      }
+    }
+  },
+  "29": {
+    "Version": "29",
+    "Modules": "133x133",
+    "Capacity": {
+      "L": {
+        "Databits": "13048",
+        "Numeric": "3909",
+        "Alphanumeric": "2369",
+        "Binary": "1628",
+        "Kanji": "1002"
+      },
+      "M": {
+        "Databits": "10136",
+        "Numeric": "3035",
+        "Alphanumeric": "1839",
+        "Binary": "1264",
+        "Kanji": "778"
+      },
+      "Q": {
+        "Databits": "7288",
+        "Numeric": "2181",
+        "Alphanumeric": "1322",
+        "Binary": "908",
+        "Kanji": "559"
+      },
+      "H": {
+        "Databits": "5608",
+        "Numeric": "1677",
+        "Alphanumeric": "1016",
+        "Binary": "698",
+        "Kanji": "430"
+      }
+    }
+  },
+  "30": {
+    "Version": "30",
+    "Modules": "137x137",
+    "Capacity": {
+      "L": {
+        "Databits": "13880",
+        "Numeric": "4158",
+        "Alphanumeric": "2520",
+        "Binary": "1732",
+        "Kanji": "1066"
+      },
+      "M": {
+        "Databits": "10984",
+        "Numeric": "3289",
+        "Alphanumeric": "1994",
+        "Binary": "1370",
+        "Kanji": "843"
+      },
+      "Q": {
+        "Databits": "7880",
+        "Numeric": "2358",
+        "Alphanumeric": "1429",
+        "Binary": "982",
+        "Kanji": "604"
+      },
+      "H": {
+        "Databits": "5960",
+        "Numeric": "1782",
+        "Alphanumeric": "1080",
+        "Binary": "742",
+        "Kanji": "457"
+      }
+    }
+  },
+  "31": {
+    "Version": "31",
+    "Modules": "141x141",
+    "Capacity": {
+      "L": {
+        "Databits": "14744",
+        "Numeric": "4417",
+        "Alphanumeric": "2677",
+        "Binary": "1840",
+        "Kanji": "1132"
+      },
+      "M": {
+        "Databits": "11640",
+        "Numeric": "3486",
+        "Alphanumeric": "2113",
+        "Binary": "1452",
+        "Kanji": "894"
+      },
+      "Q": {
+        "Databits": "8264",
+        "Numeric": "2473",
+        "Alphanumeric": "1499",
+        "Binary": "1030",
+        "Kanji": "634"
+      },
+      "H": {
+        "Databits": "6344",
+        "Numeric": "1897",
+        "Alphanumeric": "1150",
+        "Binary": "790",
+        "Kanji": "486"
+      }
+    }
+  },
+  "32": {
+    "Version": "32",
+    "Modules": "145x145",
+    "Capacity": {
+      "L": {
+        "Databits": "15640",
+        "Numeric": "4686",
+        "Alphanumeric": "2840",
+        "Binary": "1952",
+        "Kanji": "1201"
+      },
+      "M": {
+        "Databits": "12328",
+        "Numeric": "3693",
+        "Alphanumeric": "2238",
+        "Binary": "1538",
+        "Kanji": "947"
+      },
+      "Q": {
+        "Databits": "8920",
+        "Numeric": "2670",
+        "Alphanumeric": "1618",
+        "Binary": "1112",
+        "Kanji": "684"
+      },
+      "H": {
+        "Databits": "6760",
+        "Numeric": "2022",
+        "Alphanumeric": "1226",
+        "Binary": "842",
+        "Kanji": "518"
+      }
+    }
+  },
+  "33": {
+    "Version": "33",
+    "Modules": "149x149",
+    "Capacity": {
+      "L": {
+        "Databits": "16568",
+        "Numeric": "4965",
+        "Alphanumeric": "3009",
+        "Binary": "2068",
+        "Kanji": "1273"
+      },
+      "M": {
+        "Databits": "13048",
+        "Numeric": "3909",
+        "Alphanumeric": "2369",
+        "Binary": "1628",
+        "Kanji": "1002"
+      },
+      "Q": {
+        "Databits": "9368",
+        "Numeric": "2805",
+        "Alphanumeric": "1700",
+        "Binary": "1168",
+        "Kanji": "719"
+      },
+      "H": {
+        "Databits": "7208",
+        "Numeric": "2157",
+        "Alphanumeric": "1307",
+        "Binary": "898",
+        "Kanji": "553"
+      }
+    }
+  },
+  "34": {
+    "Version": "34",
+    "Modules": "153x153",
+    "Capacity": {
+      "L": {
+        "Databits": "17528",
+        "Numeric": "5253",
+        "Alphanumeric": "3183",
+        "Binary": "2188",
+        "Kanji": "1347"
+      },
+      "M": {
+        "Databits": "13800",
+        "Numeric": "4134",
+        "Alphanumeric": "2506",
+        "Binary": "1722",
+        "Kanji": "1060"
+      },
+      "Q": {
+        "Databits": "9848",
+        "Numeric": "2949",
+        "Alphanumeric": "1787",
+        "Binary": "1228",
+        "Kanji": "756"
+      },
+      "H": {
+        "Databits": "7688",
+        "Numeric": "2301",
+        "Alphanumeric": "1394",
+        "Binary": "958",
+        "Kanji": "590"
+      }
+    }
+  },
+  "35": {
+    "Version": "35",
+    "Modules": "157x157",
+    "Capacity": {
+      "L": {
+        "Databits": "18448",
+        "Numeric": "5529",
+        "Alphanumeric": "3351",
+        "Binary": "2303",
+        "Kanji": "1417"
+      },
+      "M": {
+        "Databits": "14496",
+        "Numeric": "4343",
+        "Alphanumeric": "2632",
+        "Binary": "1809",
+        "Kanji": "1113"
+      },
+      "Q": {
+        "Databits": "10288",
+        "Numeric": "3081",
+        "Alphanumeric": "1867",
+        "Binary": "1283",
+        "Kanji": "790"
+      },
+      "H": {
+        "Databits": "7888",
+        "Numeric": "2361",
+        "Alphanumeric": "1431",
+        "Binary": "983",
+        "Kanji": "605"
+      }
+    }
+  },
+  "36": {
+    "Version": "36",
+    "Modules": "161x161",
+    "Capacity": {
+      "L": {
+        "Databits": "19472",
+        "Numeric": "5836",
+        "Alphanumeric": "3537",
+        "Binary": "2431",
+        "Kanji": "1496"
+      },
+      "M": {
+        "Databits": "15312",
+        "Numeric": "4588",
+        "Alphanumeric": "2780",
+        "Binary": "1911",
+        "Kanji": "1176"
+      },
+      "Q": {
+        "Databits": "10832",
+        "Numeric": "3244",
+        "Alphanumeric": "1966",
+        "Binary": "1351",
+        "Kanji": "832"
+      },
+      "H": {
+        "Databits": "8432",
+        "Numeric": "2524",
+        "Alphanumeric": "1530",
+        "Binary": "1051",
+        "Kanji": "647"
+      }
+    }
+  },
+  "37": {
+    "Version": "37",
+    "Modules": "165x165",
+    "Capacity": {
+      "L": {
+        "Databits": "20528",
+        "Numeric": "6153",
+        "Alphanumeric": "3729",
+        "Binary": "2563",
+        "Kanji": "1577"
+      },
+      "M": {
+        "Databits": "15936",
+        "Numeric": "4775",
+        "Alphanumeric": "2894",
+        "Binary": "1989",
+        "Kanji": "1224"
+      },
+      "Q": {
+        "Databits": "11408",
+        "Numeric": "3417",
+        "Alphanumeric": "2071",
+        "Binary": "1423",
+        "Kanji": "876"
+      },
+      "H": {
+        "Databits": "8768",
+        "Numeric": "2625",
+        "Alphanumeric": "1591",
+        "Binary": "1093",
+        "Kanji": "673"
+      }
+    }
+  },
+  "38": {
+    "Version": "38",
+    "Modules": "169x169",
+    "Capacity": {
+      "L": {
+        "Databits": "21616",
+        "Numeric": "6479",
+        "Alphanumeric": "3927",
+        "Binary": "2699",
+        "Kanji": "1661"
+      },
+      "M": {
+        "Databits": "16816",
+        "Numeric": "5039",
+        "Alphanumeric": "3054",
+        "Binary": "2099",
+        "Kanji": "1292"
+      },
+      "Q": {
+        "Databits": "12016",
+        "Numeric": "3599",
+        "Alphanumeric": "2181",
+        "Binary": "1499",
+        "Kanji": "923"
+      },
+      "H": {
+        "Databits": "9136",
+        "Numeric": "2735",
+        "Alphanumeric": "1658",
+        "Binary": "1139",
+        "Kanji": "701"
+      }
+    }
+  },
+  "39": {
+    "Version": "39",
+    "Modules": "173x173",
+    "Capacity": {
+      "L": {
+        "Databits": "22496",
+        "Numeric": "6743",
+        "Alphanumeric": "4087",
+        "Binary": "2809",
+        "Kanji": "1729"
+      },
+      "M": {
+        "Databits": "17728",
+        "Numeric": "5313",
+        "Alphanumeric": "3220",
+        "Binary": "2213",
+        "Kanji": "1362"
+      },
+      "Q": {
+        "Databits": "12656",
+        "Numeric": "3791",
+        "Alphanumeric": "2298",
+        "Binary": "1579",
+        "Kanji": "972"
+      },
+      "H": {
+        "Databits": "9776",
+        "Numeric": "2927",
+        "Alphanumeric": "1774",
+        "Binary": "1219",
+        "Kanji": "750"
+      }
+    }
+  },
+  "40": {
+    "Version": "40",
+    "Modules": "177x177",
+    "Capacity": {
+      "L": {
+        "Databits": "23648",
+        "Numeric": "7089",
+        "Alphanumeric": "4296",
+        "Binary": "2953",
+        "Kanji": "1817"
+      },
+      "M": {
+        "Databits": "18672",
+        "Numeric": "5596",
+        "Alphanumeric": "3391",
+        "Binary": "2331",
+        "Kanji": "1435"
+      },
+      "Q": {
+        "Databits": "13328",
+        "Numeric": "3993",
+        "Alphanumeric": "2420",
+        "Binary": "1663",
+        "Kanji": "1024"
+      },
+      "H": {
+        "Databits": "10208",
+        "Numeric": "3057",
+        "Alphanumeric": "1852",
+        "Binary": "1273",
+        "Kanji": "784"
+      }
+    }
+  }
+}
