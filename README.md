@@ -2,22 +2,24 @@
 
 _Quod Erat Demonstrandum_. _Q.E.D._
 
-__Back up your data with QR codes anywhere and anyplace.__  _(warning: It's deadly inefficient. `'-']b`)_
+__Back up your data with QR codes anywhere and anyplace.__  (_warning: It's deadly inefficient, as you know._ `'-']b`)
 
-This highly inspired by https://github.com/alisinabh/paperify.
+This is heavily inspired by https://github.com/alisinabh/paperify.
 
-This improved usability and added some features.
+`qed` improved usability and added some features.
 
-- `qed` creates some bytes of header when encoding
-- so that it gives some information when decoded.
-- can handle many kinds of data, or a mixture and duplicates of them
+- `qed` creates some bytes of header when encoding so that it gives some information when decoded.
+- Once encoded by `qed`, it __can be restored at any moment__.
+
+  - Even if multiple kinds of backups are __mixed and duplicated within a single directory__...
+  - Even if the file names are not sorted... (_acutally, the file names have nothing to do with recovery_)
 
 
 
 ## Install
 ```sh
 # prerequisites
-$ brew install zbar qrencode
+$ brew install zbar qrencode coreutils imagemagick
 
 # clone
 $ git clone https://github.com/thyeem/qed.git
@@ -25,32 +27,36 @@ $ git clone https://github.com/thyeem/qed.git
 # put the 'qed' file in $PATH direcoty like $HOME/.local/bin/ if needed
 $ cp qed $HOME/.local/bin
 
+# test (optional)
+# check it out if you want to know it works well.
+$ bash test.sh
+
 ```
 
 ## Usage
 ```plain
+ qed - backup using QR encode/decode
 
-qed - backup using QR encode/decode
+ [encode]
+     qed -e [-o OUT-DIR] [-s CELL-SIZE] [-m MARGIN]
+            [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-t DATA-TYPE]
+            [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-q] FILE
 
-[encode]
-    qed -e [-b SPLIT-BYTE] [-s CELL-SIZE] [-m MARGIN] [-o OUT-DIR]
-           [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-q]
-           [-1 QR-COLOR-BG] [-0 QR-COLOR-FG] FILE
-
-[decode]
-    qed -d [-r RESIZE-RATIO(%) ] [-o OUT-FILE] DIR
+ [decode]
+     qed -d [-r RESIZE-RATIO(%) ] [-o OUT-FILE] DIR
 
 
-options:
-     -b    split-byte-size when data is large enough  (depends on '-l')
-     -s    cell size of QR-code
-     -m    margin of QR-code  (recommended 4+)
-     -v    version of QR-code  (1 to 40)
-     -l    error correction level of QR-code  (one of [L,M,Q,H])
-     -q    open output qr-images to the browser when encoding is finished
-     -1    foreground color of QR-code  (6-hexadecimal)
-     -0    background color of QR-code  (6-hexadecimal)
-     -r    set resize-ratio if resizing is needed  (6-hexadecimal)
+ options:
+      -q    Open output images to browser when encoding is finished"
+      -s    Set cell size of QR-code"         (default: 13)
+      -m    Set margin of QR-code             (recommended 4+, default: 8)
+      -1    Set Foreground color of QR-code   (6-hexadecimal, default: 000000)
+      -0    Set Background color of QR-code   (6-hexadecimal, default: ffffff)
+      -r    Set resize-ratio if needed        (6-hexadecimal, default: 25%)
+      -v    Set version of QR-code            (1 to 40, default: 40)
+      -l    Set QR error correction level     (one of [L,M,Q,H], default: L)
+      -t    Set type of input data            (one of [A,B,D,K,N], default: B)
+            A-Alphanumeric, B-Binary, D-Databits, K-Kanji, and N-Numeric
 
 ```
 
@@ -58,15 +64,14 @@ options:
 ## Example
 ```sh
 ## encode:
-# data to encode -> 'qed' file  (encode itself!)
-# encoding 'qed' file into QR codes in /tmp/backup dir
+# encoding 'qed' file (encode itself!) into QR codes in /tmp/backup dir
 $ qed -e -o /tmp/backup qed
 
 # open QR code images on browser when encoding is finished
 $ qed -e -o /tmp/backup -q qed
 
 # with various options
-$ qed -e -q -b 500 -s 10 -m 32 -v 40 -l Q -1 cccccc -0 e0ffff -o /tmp/backup qed
+$ qed -e -q -s 10 -m 32 -v 30 -l Q -t N -1 cccccc -0 e0ffff -o /tmp/backup qed
 
 ## decode:
 $ qed -d /tmp/backup

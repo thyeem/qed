@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # PREREQUISITE ----------------------------------------
-# $ brew install zbar qrencode imagemagick
+# $ brew install zbar qrencode coreutils imagemagick
 
 # EDIT-ZONE -------------------------------------------
 
@@ -17,8 +17,8 @@ ENCODED_QR_DIR=/tmp/.q
 # default output path when decoding
 DECODED_FILE=/tmp/q
 
-# default byte-size that one QRcode can be encoded
-QR_ENCODE_BYTES=2048
+# file defining max-byte of QRcode
+QR_MAX_BYTES_DEF_FILE=${PWD}/qr_alltype_capacity.json
 
 # default QR-error-correction-level: one of [L,M,Q,H]
 QR_ERROR_CORRECTION=L
@@ -27,7 +27,7 @@ QR_ERROR_CORRECTION=L
 QR_VERSION=38
 
 # default QR-cell size
-QR_CELL_SIZE=13
+QR_CELL_SIZE=15
 
 # default cell margin in QRcode area
 QR_MARGIN=8
@@ -36,10 +36,29 @@ QR_MARGIN=8
 QR_FOREGROUND="000000"
 
 # default background-color of QRcode [6-hexadecimal]
-QR_BACKGROUND="e8e8e8"
+QR_BACKGROUND="ffffff"
 
 # default image ratio to original when resizing
 QR_RESIZE_RATIO=25%
+
+# default type of input data: one of [A,B,D,K,N]
+# alphanumeric, binary, databits, kanji, and numeric, respectively
+QR_DATA_TYPE=B
+
+
+# HEADER OF DATA TOKEN --------------------------------
+#
+# header(HEADER_BYTES) := [hash:HASH_ID_BYTES]
+#                       + [index:INDEX_BYTES]
+#                       + [size:INDEX_BYTES]
+#
+# make sure that HEADER_BYTES == (HASH_ID_BYTES + INDEX_BYTES * 2)
+
+HEADER_BYTES=12
+
+HASH_ID_BYTES=6
+
+INDEX_BYTES=3
 
 # -----------------------------------------------------
 
@@ -65,7 +84,7 @@ realpath () {
 
 hash-id () {
     # $1: filepath
-    echo -n $($HASHER $1 | head -c 6)
+    echo -n $($HASHER $1 | head -c ${HASH_ID_BYTES})
 }
 
 assert-dir () {
@@ -84,22 +103,33 @@ set-value-or-default () {
     echo -n ${1:-$2}
 }
 
+select-data-type () {
+    case $1 in
+        A) echo -n "Alphanumeric";;
+        B) echo -n "Binary";;
+        D) echo -n "Databits";;
+        K) echo -n "Kanji";;
+        N) echo -n "Numeric";;
+        *) echo "No such value for data type: $1"; exit 1;;
+    esac
+}
 
-while getopts edq-:b:s:m:o:v:l:0:1:r: flag
+
+while getopts edqs:m:o:0:1:r:v:l:t: flag
 do
     case "${flag}" in
         e) enc=${OPTARG:-undefined};;
         d) dec=${OPTARG:-undefined};;
         q) view=${OPTARG:-/tmp/.q.html};;
-        b) bytes=${OPTARG};;
         s) size=${OPTARG};;
         m) margin=${OPTARG};;
         o) out=${OPTARG};;
+        0) bcolor=${OPTARG};;
+        1) fcolor=${OPTARG};;
+        r) ratio=${OPTARG};;
         v) version=${OPTARG};;
         l) level=${OPTARG};;
-        1) fcolor=${OPTARG};;
-        0) bcolor=${OPTARG};;
-        r) ratio=${OPTARG};;
+        t) datatype=${OPTARG};;
     esac
 done
 
@@ -107,68 +137,76 @@ shift $(($OPTIND - 1))
 input=$1
 
 
-
 # HELP:
 if [ $# -eq 0 ]; then
     this=$(basename $0)
-    echo
-    echo "qed - backup using QR encode/decode"
-    echo
-    echo "[encode]"
-    echo "    $this -e [-b SPLIT-BYTE] [-s CELL-SIZE] [-m MARGIN] [-o OUT-DIR]"
-    echo "           [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-q]"
-    echo "           [-1 QR-COLOR-BG] [-0 QR-COLOR-FG] FILE"
-    echo
-    echo "[decode]"
-    echo "    $this -d [-r RESIZE-RATIO(%) ] [-o OUT-FILE] DIR"
-    echo
-    echo
-    echo "options:"
-    echo "     -b    split-byte-size when data is large enough  (depends on '-l')"
-    echo "     -s    cell size of QR-code"
-    echo "     -m    margin of QR-code  (recommended 4+)"
-    echo "     -v    version of QR-code  (1 to 40)"
-    echo "     -l    error correction level of QR-code  (one of [L,M,Q,H])"
-    echo "     -q    open output qr-images to the browser when encoding is finished"
-    echo "     -1    foreground color of QR-code  (6-hexadecimal)"
-    echo "     -0    background color of QR-code  (6-hexadecimal)"
-    echo "     -r    set resize-ratio if resizing is needed  (6-hexadecimal)"
+    cat << HELP
+ qed - backup using QR encode/decode
+
+ [encode]
+     $this -e [-o OUT-DIR] [-s CELL-SIZE] [-m MARGIN]
+            [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-t DATA-TYPE]
+            [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-q] FILE
+
+ [decode]
+     $this -d [-r RESIZE-RATIO(%) ] [-o OUT-FILE] DIR
+
+
+ options:
+      -q    Open output images to browser when encoding is finished"
+      -s    Set cell size of QR-code"         (default: $QR_CELL_SIZE)
+      -m    Set margin of QR-code             (recommended 4+, default: $QR_MARGIN)
+      -1    Set Foreground color of QR-code   (6-hexadecimal, default: $QR_FOREGROUND)
+      -0    Set Background color of QR-code   (6-hexadecimal, default: $QR_BACKGROUND)
+      -r    Set resize-ratio if needed        (6-hexadecimal, default: $QR_RESIZE_RATIO)
+      -v    Set version of QR-code            (1 to 40, default: $QR_VERSION)
+      -l    Set QR error correction level     (one of [L,M,Q,H], default: $QR_ERROR_CORRECTION)
+      -t    Set type of input data            (one of [A,B,D,K,N], default: $QR_DATA_TYPE)
+            A-Alphanumeric, B-Binary, D-Databits, K-Kanji, and N-Numeric
+HELP
 
 # OTHERWISE:
 else
     # ENCODE-MODE
     if [ ! -z $enc ] && [ -z $dec ]; then
         # set fallbacks
-        bytes=$(   set-value-or-default  $bytes    $QR_ENCODE_BYTES)
-        size=$(    set-value-or-default  $size     $QR_CELL_SIZE)
-        margin=$(  set-value-or-default  $margin   $QR_MARGIN)
-        out=$(     set-value-or-default  $out      $ENCODED_QR_DIR)
-        version=$( set-value-or-default  $version  $QR_VERSION)
-        level=$(   set-value-or-default  $level    $QR_ERROR_CORRECTION)
-        fcolor=$(  set-value-or-default  $fcolor   $QR_FOREGROUND)
-        bcolor=$(  set-value-or-default  $bcolor   $QR_BACKGROUND)
+        size=$(     set-value-or-default  $size      $QR_CELL_SIZE)
+        margin=$(   set-value-or-default  $margin    $QR_MARGIN)
+        out=$(      set-value-or-default  $out       $ENCODED_QR_DIR)
+        fcolor=$(   set-value-or-default  $fcolor    $QR_FOREGROUND)
+        bcolor=$(   set-value-or-default  $bcolor    $QR_BACKGROUND)
+        version=$(  set-value-or-default  $version   $QR_VERSION)
+        level=$(    set-value-or-default  $level     $QR_ERROR_CORRECTION)
+        datatype=$( set-value-or-default  $datatype  $QR_DATA_TYPE)
+
+        # set jq-query-filter
+        datatype=$(select-data-type $datatype)
+        filter=\"${version}_${level}_${datatype}\"
+
+        # read max-qrcode-bytes
+        bytes=$(cat ${QR_MAX_BYTES_DEF_FILE} | jq ".$filter")
 
         # clean and assert default output-dir
         assert-dir $out
 
         # split the data if large enough
-        cat $input | $SPLITTER -d -C $bytes -a3 - "$out/image-"
+        split_bytes=$(($bytes - $HEADER_BYTES))
+        cat $input | $SPLITTER -d -b ${split_bytes} -a ${INDEX_BYTES} - "$out/image-"
 
         # get a unique id for data
-        _hash=$(hash-id $input)
+        _hash=$(hash-id $input $HASH_ID_BYTES)
 
         # move and get info
         cd $out
-        len=`printf %03d $(ls -1 | wc -l)`
+        len=`printf %0${INDEX_BYTES}d $(ls -1 | wc -l)`
 
-        # add header
-        # header(12-byte) := [hash:6-byte][index:3-byte][size:3-byte]
+        # write header to each token
         it=1
         for f in *
         do
-            header="${_hash}$(printf %03d $it)${len}"
-            # write header
-            echo -n "${header}$(<$f)" > "${f}_"
+            header="${_hash}$(printf %0${INDEX_BYTES}d $it)${len}"
+            echo -n $header > "${f}_"
+            cat $f >> "${f}_"
             mv -f "${f}_" $f
             it=$((it+1))
         done
@@ -176,13 +214,20 @@ else
         # encoding into QRcode
         for f in *
         do
-            o="${f/\ /_}.png"
-            echo "processing  $out/$o"
-            cat $f | qrencode -8 -s $size -m $margin -v $version -l $level -o $o --foreground=$fcolor --background=$bcolor
+            o="${f}.png"
+            >&2 echo "processing  $out/$o"
+            cat $f | qrencode -8 -s $size -m $margin -v $version -l $level -o $o \
+                              --foreground=$fcolor --background=$bcolor
             rm -f $f
         done
-        echo
-        echo "encoded -> $out"
+
+        >&2 echo
+        >&2 echo "QR-code encoded in:" \
+                 "$bytes bytes (including ${HEADER_BYTES}-byte header)"
+        >&2 echo
+        >&2 echo "encoding output -> $out"
+        >&2 echo
+        echo "$out"
 
         # quick-view encoded images on browser if set -q
         if [ ! -z $view ]; then
@@ -206,11 +251,12 @@ else
 
         # move and get info
         cd $input
-        echo "total $(ls -1 | wc -l) files"
-        len=`printf %03d $(ls -1 | wc -l)`
+        >&2 echo "total $(ls -1 | wc -l) files"
+        len=`printf %0${INDEX_BYTES}d $(ls -1 | wc -l)`
 
         # clean and assert workplace
-        assert-dir .m
+        t=$(echo $RANDOM | md5 | head -c 6)
+        assert-dir ".$t"
 
         # decoding from images
         for f in *
@@ -223,31 +269,37 @@ else
             convert -resize "${ratio}%" $f $g
 
             # decode each iamge using zkbar
-            zbarimg --raw --quiet $g > $q
+            zbarimg --raw --quiet -Sbinary $g > $q
 
             # parse header
-            # header(12-byte) := [hash:6-byte][index:3-byte][size:3-byte]
-            header=$(cat $q | head -c 12)
-            echo "processing  ${header:0:6} [${header:6:3}/${header:9:3}]"
-            cat $q | tail -c +13 > ".m/$header"
+            header=$(cat $q | head -c $HEADER_BYTES)
+            >&2 echo "processing  ${header:0:$HASH_ID_BYTES}" \
+                     "[${header:$HASH_ID_BYTES:$INDEX_BYTES}" \
+                     "/" \
+                     "${header:$((HEADER_BYTES-$INDEX_BYTES)):$INDEX_BYTES}]"
+            cat $q | tail -c +$((HEADER_BYTES+1)) > ".$t/$header"
             rm -f $g $q
         done
 
         # move to workplace
-        cd .m
-        kinds=`find . -size +0c | awk '{print substr($0,3,6)}' | uniq`
+        cd ".$t"
+        awk=`echo {print substr\(\\$0,3,$HASH_ID_BYTES\)}`
+        kinds=$(find . -size +0c | awk "$awk" | sort | uniq)
 
         # merge files
         for k in $kinds
         do
-            out="${out}-$k"
-            ls -1 | grep $k | sort -V | xargs cat > $out
+            kout="${out}-$k"
+            ls -1 | grep $k | sort | xargs cat > $kout
 
             # check if the decoded is valid
-            validity=$([[ "$k" == $(hash-id $out) ]] && echo -e $(green true) \
-                                                     || echo -e $(red false))
-            echo
-            echo "decoded -> $out    (validity: $validity)"
+            validity=$([[ "$k" == $(hash-id $kout $HASH_ID_BYTES) ]] \
+                       && echo -e $(green true) \
+                       || echo -e $(red false))
+            >&2 echo
+            >&2 echo "decoding output -> $kout    (validity: $validity)"
+            >&2 echo
+            echo $kout
         done
 
     else
