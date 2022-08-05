@@ -1,29 +1,23 @@
 #!/bin/bash
 
 # PREREQUISITE ----------------------------------------
-# $ brew install zbar qrencode coreutils imagemagick
+# $ brew install zbar qrencode jq imagemagick
 
 # EDIT-ZONE -------------------------------------------
 
 # splitter binary
-SPLITTER=gsplit
+SPLITTER=split
 
 # hasher binary
 HASHER=sha256sum
 
-# default output path when encoding
-ENCODED_QR_DIR=/tmp/.q
-
-# default output path when decoding
-DECODED_FILE=/tmp/q
-
 # file defining max-byte of QRcode
-QR_MAX_BYTES_DEF_FILE=${PWD}/qr_alltype_capacity.json
+QR_MAX_BYTES_DEF="$(dirname $0)/qr_alltype_capacity.json"
 
 # default QR-error-correction-level: one of [L,M,Q,H]
 QR_ERROR_CORRECTION=L
 
-# default minimum of QR-version: 1-40
+# default minimum of QR-version: an integer between 1 and 40
 QR_VERSION=38
 
 # default QR-cell size
@@ -42,85 +36,447 @@ QR_BACKGROUND="ffffff"
 QR_RESIZE_RATIO=25%
 
 # default type of input data: one of [A,B,D,K,N]
-# alphanumeric, binary, databits, kanji, and numeric, respectively
 QR_DATA_TYPE=B
 
 
-# HEADER OF DATA TOKEN --------------------------------
+# HEADER BYTES DEFINITION -------------------------------------------------
 #
-# header(HEADER_BYTES) := [hash:HASH_ID_BYTES]
-#                       + [index:INDEX_BYTES]
-#                       + [size:INDEX_BYTES]
+# These bytes in the header are to provide some information when decoded.
+# You can change the size as you like except for 'capcode'
 #
-# make sure that HEADER_BYTES == (HASH_ID_BYTES + INDEX_BYTES * 2)
+# header(HEADER_BYTES) := [hash:HASH_ID_BYTES(changeable)]
+#                       + [capcode:4-byte(fixed)]
+#                       + [index:INDEX_BYTES(changeable)]
+#                       + [size:INDEX_BYTES(changeable)]
+#
+# 'capcode' or Capaicty-Code means the amount of data can be stored.
+# This consists of version, error correction level and the data type
+#
+# capcode = [version:1-byte]
+#         + [error-coorection-level:2-byte]
+#         + [datatype:1-byte]
+#
+# version: one of [L,M,Q,H]
+# error-correction-level: 1 to 40 (padded two-digit, %02d)
+# datatype: one of [A,B,D,K,N]
+# alphanumeric, binary, databits, kanji, and numeric, in the order listed.
+#
 
-HEADER_BYTES=12
 
 HASH_ID_BYTES=6
 
 INDEX_BYTES=3
 
-# -----------------------------------------------------
+HEADER_BYTES=$(($HASH_ID_BYTES + ${INDEX_BYTES}*2))
+
+# -------------------------------------------------------------------------
+
+stderr-msg () {
+    # -> stderr messages
+    # <- $@: all messages passed
+    >&2 echo
+    >&2 echo -e "$@" "\t"
+}
+
+
+error () {
+    # -> exit status
+    # <- $@: all messages passed
+    stderr-msg $@
+    exit 1
+}
 
 
 red () {
+    # -> ansi-escaped text
+    # <- $1: text to colorize red
     echo -e "\033[0;31m$1\033[0m"
 }
 
+
 green () {
+    # -> ansi-escaped text
+    # <- $1: text to colorize green
     echo -e "\033[0;32m$1\033[0m"
 }
 
-realpath () {
-    # $1: filepath
-    dir=$(cd $(dirname $1); pwd -P)
-    fname=$(basename $1)
-    if [ -d $fname ]; then
-        echo -n $dir;
+
+abspath () {
+    # -> absolute path
+    # <- $1: filepath
+    local dir=$(cd $(dirname $1); pwd -P)
+    local fname=$(basename $1)
+    echo -n $dir/$fname;
+}
+
+
+lower () {
+    # -> lowercase string
+    # <- $1: string to convert
+    echo -n "$1" | perl -ne 'print lc'
+}
+
+
+upper () {
+    # -> uppercase string
+    # <- $1: string to convert
+    echo -n "$1" | perl -ne 'print uc'
+}
+
+
+hash-id () {
+    # -- get a hash value using a given hasher
+    #
+    # -> sized hex-string
+    # <- $1: buf - if not provided, then used <stdin>
+    if [ $# -gt 0 ]; then
+        # when used with args: hash-id "qed"
+        echo -n $(echo "$1" | $HASHER | head -c $HASH_ID_BYTES)
     else
-        echo -n $dir/$fname;
+        # when used with <stdin>: cat FILE | hash-id
+        echo -n $(cat - | $HASHER | head -c $HASH_ID_BYTES)
     fi
 }
 
-hash-id () {
-    # $1: filepath
-    echo -n $($HASHER $1 | head -c ${HASH_ID_BYTES})
+
+random-hex () {
+    # -> sized hex-string
+    # <- $1: size
+    echo -n $(cat /dev/urandom | head -c 32 | $HASHER | head -c $1)
 }
+
+
+sane-temp() {
+    # -> random string
+    echo -n "/tmp/$(basename $(mktemp))"
+}
+
 
 assert-dir () {
-    # $1: filepath
-    rm -rf $1; mkdir -p $1
+    # -> void
+    # <- $1: filepath
+    are-you-sure $1 && rm -rf $1; mkdir -p $1
 }
+
 
 assert-file () {
-    # $1: filepath
-    rm -f $1; :> $1
+    # -> void
+    # <- $1: filepath
+    are-you-sure $1 && rm -f $1; :> $1
 }
 
+
 set-value-or-default () {
-    # $1: variable
-    # $2: default-value
+    # -> value
+    # <- $1: defined variable
+    # <- $2: default value (as fallback)
     echo -n ${1:-$2}
 }
 
+
+are-you-sure () {
+    # -> exit status
+    # <- $1: filepath
+    if [ -e $1 ]; then
+        read -n 1 -rp "Are you sure to delete $1? [y/N] "
+        >&2 echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            return 0
+        fi
+    else
+        return 0
+    fi
+    exit 1
+}
+
+
+decimal-to-binary () {
+    # -> binary-form string
+    # <- $1: decimal-form string
+    # <- $2: (optional) size of output. if not provided, use the minimum length
+    local n=$1
+    local size=$2
+    if [ -z $size ]; then
+        while true; do
+            size=$((size + 1))
+            [[ $n -lt $((2 ** $size)) ]] && break
+        done
+    fi
+
+    local r=
+    for _ in $(seq $size); do
+        b="$b$(echo -n $(($n & 1)))"
+        ((n >>= 1))
+    done
+    echo -n $b | rev
+}
+
+
 select-data-type () {
+    # -> datatype string
+    # <- $1: datatype char
     case $1 in
         A) echo -n "Alphanumeric";;
         B) echo -n "Binary";;
         D) echo -n "Databits";;
         K) echo -n "Kanji";;
         N) echo -n "Numeric";;
-        *) echo "No such value for data type: $1"; exit 1;;
+        *) stderr-msg "no such value for data type: $1"; exit 1;;
     esac
 }
 
 
+gen-capcode () {
+    # -> capcode-string
+    # <- $1: version
+    # <- $2: correction level
+    # <- $3: datatype
+    echo -n "$(printf %02d $version)$level$datatype"
+}
+
+
+query-max-qr-encoding-byte () {
+    # -> max-QR-storage-byte number
+    # <- $1: capcode (expected 4-byte like '38LB')
+    local datatype=$(select-data-type $datatype)
+    local filter=\"${1:0:2}_${1:2:1}_$datatype\"
+    echo -n $(cat ${QR_MAX_BYTES_DEF} | jq ".$filter")
+}
+
+
+split-data () {
+    # -- split the given buffer if large enough
+    #
+    # -> void
+    # <- $1: buf
+    # <- $2: bytes
+    # <- $3: prefix
+    echo "$1" | $SPLITTER -b $(($2 - $HEADER_BYTES)) -a ${INDEX_BYTES} - "$3"
+}
+
+
+write-header-and-encode () {
+    # -- write a header to each token and encode it into a QRcode
+    #
+    # -> void
+    # <- $1: _hash
+    # <- $2: size
+    # <- $3: margin
+    # <- $4: version
+    # <- $5: level
+    # <- $6: fcolor
+    # <- $7: bcolor
+    local total=$(printf %0${INDEX_BYTES}d $(ls -1 _ | wc -l))
+    local it=1
+    for f in $(ls -1 _ | sort); do
+        local header="$1$(printf %0${INDEX_BYTES}d $it)$total"
+        echo -n $header | cat - "_/$f" > _/_ && mv _/_ "_/$f"
+        local o="$f.png"
+        stderr-msg -n "processing  $1" \
+                      "[$(printf %0${INDEX_BYTES}d $it) / $total]  >>  $o"
+        cat "_/$f" | qrencode -8               \
+                              -s $2            \
+                              -m $3            \
+                              -v $4            \
+                              -l $5            \
+                              -o $o            \
+                              --foreground=$6  \
+                              --background=$7
+        [[ $? -ne 0 ]] && error "occured errors during encoding. aborted. "
+        it=$((it+1))
+    done
+    rm -rf _
+}
+
+
+quick-view-on-browser () {
+    # -> void
+    # <- $1: html-file-basename
+    local html="$1.html"
+    assert-file $html
+    echo -e "<!DOCTYPE html>" >> $html
+    echo -e "<head><title>qed-encoded</title></head>" >> $html
+    echo -e "<body><center>" >> $html
+    for f in $(ls -1 | sort); do
+        echo -e "<p><img src=\"$(abspath $f)\" width="1000"></p>" >> $html
+    done
+    echo -e "</center></body><html>" >> $html
+    open $html
+}
+
+
+encode () {
+    # -- the outermost encoding wrapper function
+    # -- single encoding process is performed for a given file
+    #
+    # -> void
+    # <- $1:    output dirname
+    # <- $2:    buf
+    # <- $3:    buf-name
+    # <- $4:    bytes
+    # <- $5:    size
+    # <- $6:    margin
+    # <- $7:    version
+    # <- $8:    level
+    # <- $9:    fcolor
+    # <- ${10}: bcolor
+
+    # print getting encode started
+    stderr-msg -n "."
+    stderr-msg "encoding input <- $3"
+
+    # get a unique id for data
+    local _hash=$(hash-id "$2")
+
+    assert-dir "$1/_"
+    split-data "$2" $4 "$1/_/${_hash}-"
+
+    cd $1
+
+    write-header-and-encode $_hash \
+                            $5     \
+                            $6     \
+                            $7     \
+                            $8     \
+                            $9     \
+                            ${10}
+
+    stderr-msg "completed.  each QRcode encoded in:" \
+               "$4 bytes (including ${HEADER_BYTES}-byte header)"
+
+    stderr-msg "encoding output -> $1"
+
+    # quick-view encoded images on browser if set -q
+    [[ ! -z $view ]] && quick-view-on-browser "$1-$(random-hex 6)"
+}
+
+
+decode-qrcode-image () {
+    # -> void
+    # <- $1: qrcode image file
+    # <- $2: dirname where restored files are collected
+    # <- $3: resize ratio to original
+
+    # resize
+    convert -resize "${3}%" $1 __
+
+    # decode each iamge using zkbar
+    zbarimg --raw --quiet -Sbinary __ > _
+
+    [[ $? -ne 0 ]] && \
+        error "occured errors during decoding QRcode images. aborted."
+
+    # parse header
+    local header=$(cat _ | head -c $HEADER_BYTES)
+    stderr-msg -n \
+        "processing  ${header:0:$HASH_ID_BYTES}" \
+        "[${header:$HASH_ID_BYTES:$INDEX_BYTES} /" \
+        "${header:$((HEADER_BYTES-$INDEX_BYTES)):$INDEX_BYTES}]" \
+        " <<  $1"
+    cat _ | tail -c +$((HEADER_BYTES + 1)) > "$2/$header"
+    rm -f __ _
+}
+
+find-hashes-of-uniq-files () {
+    # -> many hash strings (blank separated)
+    # no input, but this function depends on the directory location.
+    local awk=`echo {print substr\(\\$0,3,$HASH_ID_BYTES\)}`
+    echo -n $(find . -size +0c | awk "$awk" | sort | uniq)
+}
+
+merge-decoded-files () {
+    # -> merged file
+    # <- $1: output dirname
+    # <- $2: hash value that the merged file is expected to have
+    local merged="$1-$2"
+    ls -1 | grep $_hash | sort | xargs cat > $merged
+
+    # check if the decoded is valid
+    local validity=$( \
+        [[ $2 == $(cat $merged | hash-id) ]] && echo -e $(green true) \
+                                             || echo -e $(red false))
+    stderr-msg -n
+    stderr-msg "decoding output -> $merged    (validity: $validity)"
+    stderr-msg
+    echo -n $merged
+}
+
+decode () {
+    # -- the outermost decoding wrapper function
+    #
+    # -> filepath of merged files
+    # <- $1: dir containing files to be decoded
+    # <- $2: output dirname where the merged file will be located
+
+    # print getting encode started
+    stderr-msg -n "."
+    stderr-msg "decoding input <- $(abspath $1)"
+
+    cd $1
+
+    # where restored files are collected
+    local restored=".$(random-hex 16)"
+    assert-dir "$restored"
+
+    # decoding from images
+    for f in *; do
+        decode-qrcode-image $f $restored $ratio
+    done
+
+    # move to the directory of restored files
+    cd "$restored"
+
+    # merge files
+    for _hash in $(find-hashes-of-uniq-files); do
+        echo $(merge-decoded-files $2 $_hash)
+    done
+
+}
+
+
+print-help () {
+    local this=$(basename $0)
+    cat << HELP
+ qed - backup using QR encode/decode
+
+ . encode :: [FILE] -> DIR
+
+      $this -e [-o OUT-DIR] [-s CELL-SIZE] [-m MARGIN]
+             [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-t DATA-TYPE]
+             [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-q] FILE ...
+
+
+ . decode :: DIR -> [FILE]
+
+      $this -d [-r RESIZE-RATIO(%) ] [-o OUT-FILE] DIR
+
+
+ options:
+      -q    Open output images to browser when encoding is finished"
+      -s    Set cell size of QRcode"         (default: $QR_CELL_SIZE)
+      -m    Set margin of QRcode             (recommended 4+, default: $QR_MARGIN)
+      -1    Set foreground color of QRcode   (6-hexadecimal, default: $QR_FOREGROUND)
+      -0    Set background color of QRcode   (6-hexadecimal, default: $QR_BACKGROUND)
+      -r    Set resize-ratio if needed       (6-hexadecimal, default: $QR_RESIZE_RATIO)
+      -v    Set version of QRcode            (1 to 40, default: $QR_VERSION)
+      -l    Set QR error correction level    (one of [L,M,Q,H], default: $QR_ERROR_CORRECTION)
+      -t    Set type of input data           (one of [A,B,D,K,N], default: $QR_DATA_TYPE)
+            A-Alphanumeric, B-Binary, D-Databits, K-Kanji, and N-Numeric
+HELP
+}
+
+
+
+# --------------
+# env setting
+# --------------
+# process options
 while getopts edqs:m:o:0:1:r:v:l:t: flag
 do
     case "${flag}" in
-        e) enc=${OPTARG:-undefined};;
-        d) dec=${OPTARG:-undefined};;
-        q) view=${OPTARG:-/tmp/.q.html};;
+        e) enc=${OPTARG:-set};;
+        d) dec=${OPTARG:-set};;
+        q) view=${OPTARG:-set};;
         s) size=${OPTARG};;
         m) margin=${OPTARG};;
         o) out=${OPTARG};;
@@ -132,177 +488,102 @@ do
         t) datatype=${OPTARG};;
     esac
 done
+shift $((OPTIND - 1))
 
-shift $(($OPTIND - 1))
-input=$1
-
-
-# HELP:
-if [ $# -eq 0 ]; then
-    this=$(basename $0)
-    cat << HELP
- qed - backup using QR encode/decode
-
- [encode]
-     $this -e [-o OUT-DIR] [-s CELL-SIZE] [-m MARGIN]
-            [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-t DATA-TYPE]
-            [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-q] FILE
-
- [decode]
-     $this -d [-r RESIZE-RATIO(%) ] [-o OUT-FILE] DIR
+# set fallbacks
+out=$(      set-value-or-default  $out       $(sane-temp))
+size=$(     set-value-or-default  $size      $QR_CELL_SIZE)
+margin=$(   set-value-or-default  $margin    $QR_MARGIN)
+fcolor=$(   set-value-or-default  $fcolor    $QR_FOREGROUND)
+bcolor=$(   set-value-or-default  $bcolor    $QR_BACKGROUND)
+ratio=$(    set-value-or-default  $ratio     $QR_RESIZE_RATIO)
+version=$(  set-value-or-default  $version   $QR_VERSION)
+level=$(    set-value-or-default  $level     $QR_ERROR_CORRECTION)
+datatype=$( set-value-or-default  $datatype  $QR_DATA_TYPE)
 
 
- options:
-      -q    Open output images to browser when encoding is finished"
-      -s    Set cell size of QR-code"         (default: $QR_CELL_SIZE)
-      -m    Set margin of QR-code             (recommended 4+, default: $QR_MARGIN)
-      -1    Set Foreground color of QR-code   (6-hexadecimal, default: $QR_FOREGROUND)
-      -0    Set Background color of QR-code   (6-hexadecimal, default: $QR_BACKGROUND)
-      -r    Set resize-ratio if needed        (6-hexadecimal, default: $QR_RESIZE_RATIO)
-      -v    Set version of QR-code            (1 to 40, default: $QR_VERSION)
-      -l    Set QR error correction level     (one of [L,M,Q,H], default: $QR_ERROR_CORRECTION)
-      -t    Set type of input data            (one of [A,B,D,K,N], default: $QR_DATA_TYPE)
-            A-Alphanumeric, B-Binary, D-Databits, K-Kanji, and N-Numeric
-HELP
+capcode=$(gen-capcode $version $level $datatype)
 
-# OTHERWISE:
+bytes=$(query-max-qr-encoding-byte $capcode)
+
+
+[[ $bytes == "null" ]] && \
+    error "failed to get QR-max-encoding-byte." \
+          "\ncheck if the values of -l, -t, and -v are set correctly."
+
+# clean and assert default output directory
+assert-dir $out
+
+
+
+# --------------
+# qed main
+# --------------
+if [ ! -p /dev/stdin ] && [ $# -eq 0 ]; then
+    print-help
+
 else
-    # ENCODE-MODE
+    # when encode-mode: ---------------------------------------------------
     if [ ! -z $enc ] && [ -z $dec ]; then
-        # set fallbacks
-        size=$(     set-value-or-default  $size      $QR_CELL_SIZE)
-        margin=$(   set-value-or-default  $margin    $QR_MARGIN)
-        out=$(      set-value-or-default  $out       $ENCODED_QR_DIR)
-        fcolor=$(   set-value-or-default  $fcolor    $QR_FOREGROUND)
-        bcolor=$(   set-value-or-default  $bcolor    $QR_BACKGROUND)
-        version=$(  set-value-or-default  $version   $QR_VERSION)
-        level=$(    set-value-or-default  $level     $QR_ERROR_CORRECTION)
-        datatype=$( set-value-or-default  $datatype  $QR_DATA_TYPE)
 
-        # set jq-query-filter
-        datatype=$(select-data-type $datatype)
-        filter=\"${version}_${level}_${datatype}\"
+        # when used with args <stdin>: cat FILE | qed -e
+        if [ -p /dev/stdin ]; then
+            buf=`echo "$(</dev/stdin)"`
+            buf_name="/dev/stdin"
+            encode "$out"       \
+                   "$buf"       \
+                   "$buf_name"  \
+                   "$bytes"     \
+                   "$size"      \
+                   "$margin"    \
+                   "$version"   \
+                   "$level"     \
+                   "$fcolor"    \
+                   "$bcolor"
+            stderr-msg
+            echo "$out"
 
-        # read max-qrcode-bytes
-        bytes=$(cat ${QR_MAX_BYTES_DEF_FILE} | jq ".$filter")
+        # when used with args: qed -e FILE1 FILE2 FILE3 ...
+        else
+            for f in "${@}"; do
+                popd &>/dev/null; pushd `pwd` &>/dev/null;
+                [[ ! -f $f ]] && error "file not found or illegal file: $f"
 
-        # clean and assert default output-dir
-        assert-dir $out
-
-        # split the data if large enough
-        split_bytes=$(($bytes - $HEADER_BYTES))
-        cat $input | $SPLITTER -d -b ${split_bytes} -a ${INDEX_BYTES} - "$out/image-"
-
-        # get a unique id for data
-        _hash=$(hash-id $input $HASH_ID_BYTES)
-
-        # move and get info
-        cd $out
-        len=`printf %0${INDEX_BYTES}d $(ls -1 | wc -l)`
-
-        # write header to each token
-        it=1
-        for f in *
-        do
-            header="${_hash}$(printf %0${INDEX_BYTES}d $it)${len}"
-            echo -n $header > "${f}_"
-            cat $f >> "${f}_"
-            mv -f "${f}_" $f
-            it=$((it+1))
-        done
-
-        # encoding into QRcode
-        for f in *
-        do
-            o="${f}.png"
-            >&2 echo "processing  $out/$o"
-            cat $f | qrencode -8 -s $size -m $margin -v $version -l $level -o $o \
-                              --foreground=$fcolor --background=$bcolor
-            rm -f $f
-        done
-
-        >&2 echo
-        >&2 echo "QR-code encoded in:" \
-                 "$bytes bytes (including ${HEADER_BYTES}-byte header)"
-        >&2 echo
-        >&2 echo "encoding output -> $out"
-        >&2 echo
-        echo "$out"
-
-        # quick-view encoded images on browser if set -q
-        if [ ! -z $view ]; then
-            assert-file $view
-            echo -e "<!DOCTYPE html>" >> $view
-            echo -e "<head><title>qed-encoded</title></head>" >> $view
-            echo -e "<body><center>" >> $view
-            for f in *
-            do
-                echo -e "<p><img src=\"$(realpath $f)\" width="1000"></p>" >> $view
+                buf="$(cat $f)"
+                buf_name=$(abspath $f)
+                encode "$out"       \
+                       "$buf"       \
+                       "$buf_name"  \
+                       "$bytes"     \
+                       "$size"      \
+                       "$margin"    \
+                       "$version"   \
+                       "$level"     \
+                       "$fcolor"    \
+                       "$bcolor"
             done
-            echo -e "</center></body><html>" >> $view
-            open $view
+            stderr-msg
+            echo "$out"
         fi
 
-    # DECODE-MODE
+
+    # when decode-mode: ---------------------------------------------------
     elif [ -z "$enc" ] && [ ! -z "$dec" ]; then
-        # set fallbacks
-        out=$(   set-value-or-default  $out   $DECODED_FILE)
-        ratio=$( set-value-or-default  $ratio $QR_RESIZE_RATIO)
 
-        # move and get info
-        cd $input
-        >&2 echo "total $(ls -1 | wc -l) files"
-        len=`printf %0${INDEX_BYTES}d $(ls -1 | wc -l)`
+        # when used with args <stdin>: echo DIR | qed -e
+        if [ -p /dev/stdin ]; then
+            dir=`echo "$(</dev/stdin)"`
 
-        # clean and assert workplace
-        t=$(echo $RANDOM | md5 | head -c 6)
-        assert-dir ".$t"
+        # when used with args: qed -d DIR
+        else
+            dir=$1
+        fi
 
-        # decoding from images
-        for f in *
-        do
-            base=$(basename ${f%.*})
-            g="${base}-resized.jpg"
-            q="${base}-decoded"
-
-            # resize
-            convert -resize "${ratio}%" $f $g
-
-            # decode each iamge using zkbar
-            zbarimg --raw --quiet -Sbinary $g > $q
-
-            # parse header
-            header=$(cat $q | head -c $HEADER_BYTES)
-            >&2 echo "processing  ${header:0:$HASH_ID_BYTES}" \
-                     "[${header:$HASH_ID_BYTES:$INDEX_BYTES}" \
-                     "/" \
-                     "${header:$((HEADER_BYTES-$INDEX_BYTES)):$INDEX_BYTES}]"
-            cat $q | tail -c +$((HEADER_BYTES+1)) > ".$t/$header"
-            rm -f $g $q
-        done
-
-        # move to workplace
-        cd ".$t"
-        awk=`echo {print substr\(\\$0,3,$HASH_ID_BYTES\)}`
-        kinds=$(find . -size +0c | awk "$awk" | sort | uniq)
-
-        # merge files
-        for k in $kinds
-        do
-            kout="${out}-$k"
-            ls -1 | grep $k | sort | xargs cat > $kout
-
-            # check if the decoded is valid
-            validity=$([[ "$k" == $(hash-id $kout $HASH_ID_BYTES) ]] \
-                       && echo -e $(green true) \
-                       || echo -e $(red false))
-            >&2 echo
-            >&2 echo "decoding output -> $kout    (validity: $validity)"
-            >&2 echo
-            echo $kout
-        done
+        decode $dir $out
 
     else
-        echo "Choose either '-e' for encode or '-d' for decode."
+        error "Choose either '-e' for encode or '-d' for decode."
     fi
 fi
+
+# q.e.d.

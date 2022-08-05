@@ -19,7 +19,7 @@ This is heavily inspired by https://github.com/alisinabh/paperify.
 ## Install
 ```sh
 # prerequisites
-$ brew install zbar qrencode coreutils imagemagick
+$ brew install zbar qrencode jq imagemagick
 
 # clone
 $ git clone https://github.com/thyeem/qed.git
@@ -37,25 +37,28 @@ $ bash test.sh
 ```plain
  qed - backup using QR encode/decode
 
- [encode]
-     qed -e [-o OUT-DIR] [-s CELL-SIZE] [-m MARGIN]
-            [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-t DATA-TYPE]
-            [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-q] FILE
+ . encode :: [FILE] -> DIR
 
- [decode]
-     qed -d [-r RESIZE-RATIO(%) ] [-o OUT-FILE] DIR
+      qed -e [-o OUT-DIR] [-s CELL-SIZE] [-m MARGIN]
+             [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-t DATA-TYPE]
+             [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-q] FILE ...
+
+
+ . decode :: DIR -> [FILE]
+
+      qed -d [-r RESIZE-RATIO(%) ] [-o OUT-FILE] DIR
 
 
  options:
       -q    Open output images to browser when encoding is finished"
-      -s    Set cell size of QR-code"         (default: 13)
-      -m    Set margin of QR-code             (recommended 4+, default: 8)
-      -1    Set Foreground color of QR-code   (6-hexadecimal, default: 000000)
-      -0    Set Background color of QR-code   (6-hexadecimal, default: ffffff)
-      -r    Set resize-ratio if needed        (6-hexadecimal, default: 25%)
-      -v    Set version of QR-code            (1 to 40, default: 40)
-      -l    Set QR error correction level     (one of [L,M,Q,H], default: L)
-      -t    Set type of input data            (one of [A,B,D,K,N], default: B)
+      -s    Set cell size of QRcode"         (default: 15)
+      -m    Set margin of QRcode             (recommended 4+, default: 8)
+      -1    Set foreground color of QRcode   (6-hexadecimal, default: 000000)
+      -0    Set background color of QRcode   (6-hexadecimal, default: ffffff)
+      -r    Set resize-ratio if needed       (6-hexadecimal, default: 25%)
+      -v    Set version of QRcode            (1 to 40, default: 38)
+      -l    Set QR error correction level    (one of [L,M,Q,H], default: L)
+      -t    Set type of input data           (one of [A,B,D,K,N], default: B)
             A-Alphanumeric, B-Binary, D-Databits, K-Kanji, and N-Numeric
 
 ```

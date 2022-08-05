@@ -1,26 +1,29 @@
 #!/usr/bin/bash
 
+path=$(dirname $0)
+QED="$path/qed"
+
 # --------------------------------------
 # recovery for multiple file types
 # --------------------------------------
 tests=(
-    "qed"
-    "test.sh"
-    "qr_alltype_capacity.json"
-    "qr_binary_capacity.json "
-    "qr_capacity.json"
-    "README.md"
-    "data/aria.mid"
-    "data/wave.gif"
-    "data/assistant.mp4"
-    "data/traumerei.pdf"
-    "data/francis.pdf"
-    "data/aria.m4a"
+    "$path/qed"
+    "$path/test.sh"
+    "$path/qr_alltype_capacity.json"
+    "$path/qr_binary_capacity.json"
+    "$path/qr_capacity.json"
+    "$path/README.md"
+    "$path/data/aria.mid"
+    "$path/data/wave.gif"
+    "$path/data/assistant.mp4"
+    "$path/data/traumerei.pdf"
+    "$path/data/francis.pdf"
+    "$path/data/aria.m4a"
 )
 
 for t in ${tests[@]}
 do
-    qed -qe $t | xargs qed -d
+    ${QED} -qe $t | xargs ${QED} -d
 done
 
 
@@ -28,23 +31,25 @@ done
 # recovery from mixed-duplicated data
 # --------------------------------------
 dup_tests=(
-    "qed"
-    "test.sh"
-    "qr_alltype_capacity.json"
-    "qr_binary_capacity.json "
-    "qr_capacity.json"
-    "README.md"
+    "$path/qed"
+    "$path/test.sh"
+    "$path/qr_alltype_capacity.json"
+    "$path/qr_binary_capacity.json"
+    "$path/qr_capacity.json"
+    "$path/README.md"
 )
 
 
 d=/tmp/.t
+o=/tmp/.o
 rm -rf $d; mkdir -p $d
 
 for t in ${dup_tests[@]}
 do
-    qed -e $t
+    ${QED} -e -o $o $t
+
     pushd . &> /dev/null
-    cd /tmp/.q
+    cd $o
 
     # randomize file names and duplicate them.
     for f in *.png
@@ -58,4 +63,4 @@ do
     popd &> /dev/null
 done
 
-qed -d $d
+${QED} -d $d
