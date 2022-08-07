@@ -66,17 +66,43 @@ $ bash test.sh
 
 ## Example
 ```sh
-## encode:
-# encoding 'qed' file (encode itself!) into QR codes in /tmp/backup dir
-$ qed -e -o /tmp/backup qed
+# say FILE is the file to encde
+# if no -o option, encode automatically into temp dir (notify after completion)
+$ qed -e FILE
+
+# suppose that files to decode are in 'DIR'
+$ qed -d DIR
+
+# no problem with encoding multiple files at once
+# all results go to the temp output dir
+$ qed -e FILE1 FILE2 FILE3 ...
+
+# no problem in restoring the original files in the previous example.
+# say DIR-OF-MIXED-FILES is where files were mixed. (no worries even duplicated)
+$ qed -d DIR-OF-MIXED-FILES
+
+# encode via <stdin>
+$ cat FILE | qed -e
+
+# also decode supports <stdin>
+$ cat FILE | qed -e | qed -d
+
+# what would be the result?
+# it's done a lot of work of encoding and decoding,
+# but the result is the same to the file at first, FILE.
+$ cat FILE | qed -e | qed -d | xargs cat | qed -e | qed -d | xargs qed -e | qed -d
+
+# pretty sure that both are the same!
+# $(curl -s google.com) == $(cat /tmp/google)
+$ curl -s google.com | qed -e | qed -d | xargs cat > /tmp/google
 
 # open QR code images on browser when encoding is finished
-$ qed -e -o /tmp/backup -q qed
+$ qed -e -q FILE        # or -eq
 
-# with various options
-$ qed -e -q -s 10 -m 32 -v 30 -l Q -t N -1 cccccc -0 e0ffff -o /tmp/backup qed
+# set output directory to /tmp/tmp
+$ qed -e -o /tmp/tmp FILE
 
-## decode:
-$ qed -d /tmp/backup
+# encode/decode with full of options
+$ qed -e -q -s 10 -m 16 -1 333333 -0 e0ffff -v 30 -l M -t K -o /tmp/tmp FILE | qed -d -r 33%
 
 ```
