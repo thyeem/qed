@@ -28,7 +28,7 @@ $ git clone https://github.com/thyeem/qed.git
 $ cp qed $HOME/.local/bin
 
 # test (optional)
-# check it out if you want to know it works well.
+# check it out if you want to know it works well. This may take a while.
 $ bash test.sh
 
 ```
