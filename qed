@@ -130,7 +130,7 @@ hash-id () {
     # -> sized hex-string
     # <- $1: buf - if not provided, then used <stdin>
     if [ $# -gt 0 ]; then
-        # when used with args: hash-id "qed"
+        # when used with args: hash-id STRING
         echo -n $(echo "$1" | $HASHER | head -c $HASH_ID_BYTES)
     else
         # when used with <stdin>: cat FILE | hash-id
@@ -526,9 +526,9 @@ else
     # when encode-mode: ---------------------------------------------------
     if [ ! -z $enc ] && [ -z $dec ]; then
 
-        # when used with args <stdin>: cat FILE | qed -e
+        # when used with <stdin>: cat FILE | qed -e
         if [ -p /dev/stdin ]; then
-            buf=`echo "$(</dev/stdin)"`
+            buf="$(</dev/stdin)"
             buf_name="/dev/stdin"
             encode "$out"       \
                    "$buf"       \
@@ -570,9 +570,9 @@ else
     # when decode-mode: ---------------------------------------------------
     elif [ -z "$enc" ] && [ ! -z "$dec" ]; then
 
-        # when used with args <stdin>: echo DIR | qed -e
+        # when used with <stdin>: echo DIR | qed -d
         if [ -p /dev/stdin ]; then
-            dir=`echo "$(</dev/stdin)"`
+            dir="$(</dev/stdin)"
 
         # when used with args: qed -d DIR
         else
