@@ -66,7 +66,7 @@ $ bash test.sh
 
 ## Example
 ```sh
-# say FILE is the file to encde
+# say FILE is the file to encode
 # if no -o option, encode automatically into temp dir (notify after completion)
 $ qed -e FILE
 
@@ -106,3 +106,47 @@ $ qed -e -o /tmp/tmp FILE
 $ qed -e -q -s 10 -m 16 -1 333333 -0 e0ffff -v 30 -l M -t K -o /tmp/tmp FILE | qed -d -r 33%
 
 ```
+
+## Identity transform
+From the `qed` signatures of operation the below, we can easily guess `identity transform`.
+
+```
+encode :: [FILE] -> DIR
+
+decode :: DIR -> [FILE]
+
+I = decode . encode
+  = (DIR -> [FILE]) . ([FILE] -> DIR)
+  = [FILE] -> [FILE]
+  = id
+```
+
+In `SHELL` notation,
+
+
+- _i) when using `<stdin>`_ ⟹ `( | qed -e | qed -d )`
+
+  ```
+  I = decode . encode
+    = (qed -d) . (qed -e)
+    = | qed -e | qed -d
+
+  stream = I (stream)
+  stream | qed -e | qed -d  ⟹  stream
+
+  $ cat FILE | qed -e | qed -d  ⟹  (cat FILE)
+  ```
+
+
+- _ii) when using `args`_ ⟹ `( | xargs qed -e | qed -d )`
+
+  ```
+  I = decode . encode
+    = (qed -d) . (qed -e)
+    = | xargs qed -e | qed -d
+
+  args = I (args)
+  args | xargs qed -e | qed -d  ⟹  args
+
+  $ echo FILE1 FILE2 ... | xargs qed -e | qed -d  ⟹  "FILE1" "FILE2" ...
+  ```
