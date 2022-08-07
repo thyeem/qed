@@ -269,11 +269,15 @@ write-header-and-encode () {
     local total=$(printf %0${INDEX_BYTES}d $(ls -1 _ | wc -l))
     local it=1
     for f in $(ls -1 _ | sort); do
-        local header="$1$(printf %0${INDEX_BYTES}d $it)$total"
-        echo -n $header | cat - "_/$f" > _/_ && mv _/_ "_/$f"
         local o="$f.png"
+        local header="$1$(printf %0${INDEX_BYTES}d $it)$total"
         stderr-msg -n "processing  $1" \
                       "[$(printf %0${INDEX_BYTES}d $it) / $total]  >>  $o"
+
+        # write header to split file
+        echo -n $header | cat - "_/$f" > _/_ && mv _/_ "_/$f"
+
+        # encode each split file into QRcode
         cat "_/$f" | qrencode -8               \
                               -s $2            \
                               -m $3            \
@@ -360,7 +364,7 @@ decode-qrcode-image () {
     # resize
     convert -resize "${3}%" $1 __
 
-    # decode each iamge using zkbar
+    # decode each iamge using zbar
     zbarimg --raw --quiet -Sbinary __ > _
 
     [[ $? -ne 0 ]] && \
