@@ -1,9 +1,9 @@
 # qed
 
-<img src="data/sample.gif" height="500" />
-
-<img src="data/qed.gif" height="480" />
-
+<table><tr>
+<td><img src="data/qed.gif" width="600" /></td>
+<td><img src="data/sample.gif" width="600" /></td>
+</tr></table>
 <p></p>
 
 _Quod Erat Demonstrandum_. _Q.E.D._
