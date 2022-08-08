@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 # PREREQUISITE ----------------------------------------
 # $ brew install zbar qrencode jq imagemagick ffmpeg
 
@@ -69,6 +70,7 @@ INDEX_BYTES=3
 
 HEADER_BYTES=$(($HASH_ID_BYTES + ${INDEX_BYTES}*2))
 
+
 # -------------------------------------------------------------------------
 
 stderr-msg () {
@@ -82,7 +84,7 @@ stderr-msg () {
 error () {
     # -> exit status
     # <- $@: all messages passed
-    stderr-msg $@
+    stderr-msg $(red error) "\t" $@
     exit 1
 }
 
@@ -213,7 +215,7 @@ select-data-type () {
         D) echo -n "Databits";;
         K) echo -n "Kanji";;
         N) echo -n "Numeric";;
-        *) stderr-msg "no such value for data type: $1"; exit 1;;
+        *) error "no such value for data type: $1";;
     esac
 }
 
@@ -243,7 +245,8 @@ split-data () {
     # <- $1: buf
     # <- $2: bytes
     # <- $3: prefix
-    echo "$1" | $SPLITTER -b $(($2 - $HEADER_BYTES)) -a ${INDEX_BYTES} - "$3"
+    echo "$1" | $SPLITTER -b $(($2 - $HEADER_BYTES)) -a ${INDEX_BYTES} - "$3" \
+        || error "occurred problem while splitting data in: $(pwd)"
 }
 
 
@@ -277,8 +280,8 @@ write-header-and-encode () {
                               -l $5            \
                               -o $o            \
                               --foreground=$6  \
-                              --background=$7
-        [[ $? -ne 0 ]] && error "occured errors during encoding. aborted. "
+                              --background=$7  \
+            || error "occurred problem while encoding data into QRcode: $(pwd)/$f"
         it=$((it+1))
     done
     rm -rf _
@@ -294,13 +297,17 @@ create-video-and-play-slideshow () {
     stderr-msg "generating $mp4"
 
     # converting encoded images into video file
-    ffmpeg -y -hide_banner -loglevel warning \
-              -loop 1                           \
-              -framerate $SLIDE_SHOW_FRAMERATE  \
-              -t $t                             \
-              -pattern_type glob -i '*.png'     \
-              -s hd720                          \
-              $mp4
+    ffmpeg -y                                \
+           -hide_banner -loglevel warning    \
+           -loop 1                           \
+           -framerate $SLIDE_SHOW_FRAMERATE  \
+           -t $t                             \
+           -pattern_type glob                \
+           -i '*.png'                        \
+           -s hd720                          \
+           $mp4                              \
+        || error "occurred problem while creating the slideshow: $mp4"
+
     stderr-msg "opening $mp4"
     open $mp4
 }
@@ -378,13 +385,12 @@ decode-qrcode-image () {
     # <- $3: resize ratio to original
 
     # resize
-    convert -resize "${3}%" $1 __
+    convert -resize "${3}%" $1 __ \
+        || error "occurred problem during resizing Qrcode image: $1"
 
     # decode each iamge using zbar
-    zbarimg --raw --quiet -Sbinary __ > _
-
-    [[ $? -ne 0 ]] && \
-        error "occured errors during decoding QRcode images. aborted."
+    zbarimg --raw --quiet -Sbinary __ > _ \
+        || error "occurred problem during decoding QRcode images: $1"
 
     # parse header
     local header=$(cat _ | head -c $HEADER_BYTES)
@@ -529,7 +535,7 @@ bytes=$(query-max-qr-encoding-byte $capcode)
 
 [[ $bytes == "null" ]] && \
     error "failed to get QR-max-encoding-byte." \
-          "\ncheck if the values of -l, -t, and -v are set correctly."
+          "\n\t check if the values of -l, -t, and -v are set correctly."
 
 # clean and assert default output directory
 assert-dir $out
@@ -586,7 +592,6 @@ else
             echo "$out"
         fi
 
-
     # when decode-mode: ---------------------------------------------------
     elif [ -z $enc ] && [ -n $dec ]; then
 
@@ -597,12 +602,14 @@ else
         # when used with args: qed -d DIR
         else
             dir=$1
-        fi
+            [[ ! -d $dir ]] && error "used illegal directory: $dir"
 
+        fi
+        [ -z $dir ] && error "empty input: nothing to decode"
         decode $dir $out
 
     else
-        error "Choose either '-e' for encode or '-d' for decode."
+        error "choose either '-e' for encode or '-d' for decode."
     fi
 fi
 

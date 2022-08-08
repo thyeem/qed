@@ -1,9 +1,10 @@
 # qed
 
 <table><tr>
-<td><img src="data/qed.gif" width="600" /></td>
-<td><img src="data/sample.gif" width="600" /></td>
+<td><img src="data/qed.gif" width="460" /></td>
+<td><img src="data/sample.gif" width="480" /></td>
 </tr></table>
+
 <p></p>
 
 _Quod Erat Demonstrandum_. _Q.E.D._
@@ -25,9 +26,8 @@ This is heavily inspired by https://github.com/alisinabh/paperify.
 ## Install
 ```sh
 # prerequisites
-# ffmpeg is optional for '-p' option.
+# ffmpeg is optional as only used with '-p' option.
 $ brew install zbar qrencode jq imagemagick ffmpeg
-
 
 # clone
 $ git clone https://github.com/thyeem/qed.git
@@ -37,8 +37,7 @@ $ cp qed $HOME/.local/bin
 
 # test (optional)
 # check it out if you want to know it works well. This may take a while.
-$ bash test.sh
-
+$ sh test.sh
 ```
 
 ## Usage
@@ -86,7 +85,7 @@ $ qed -d DIR
 $ qed -e FILE1 FILE2 FILE3 ...
 
 # no problem in restoring the original files in the previous example.
-# say DIR-OF-MIXED-FILES is where files were mixed. (no worries even duplicated)
+# say DIR-OF-MIXED-FILES is where files were mixed. (no worries duplicated data either)
 $ qed -d DIR-OF-MIXED-FILES
 
 # encode via <stdin>
@@ -101,8 +100,8 @@ $ cat FILE | qed -e | qed -d
 $ cat FILE | qed -e | qed -d | xargs cat | qed -e | qed -d | xargs qed -e | qed -d
 
 # pretty sure that both are the same!
-# $(curl -s google.com) == $(cat /tmp/google)
-$ curl -s google.com | qed -e | qed -d | xargs cat > /tmp/google
+# $(curl -s www.google.com) == $(cat /tmp/google)
+$ curl -s www.google.com | qed -e | qed -d | xargs cat > /tmp/google
 
 # open a video (QR code slideshows) when encoding is finished
 $ qed -e -p FILE        # or -ep
@@ -115,7 +114,6 @@ $ qed -e -o /tmp/tmp FILE
 
 # encode/decode with full of options
 $ qed -e -q -s 10 -m 16 -1 333333 -0 e0ffff -v 30 -l M -t K -o /tmp/tmp FILE | qed -d -r 33%
-
 ```
 
 ## Identity transform
