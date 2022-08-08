@@ -32,14 +32,17 @@ error () {
     exit 1
 }
 
+
 when_encode_decode_with_data_passed_via_stdin () {
     cat ${files[5]} | ${QED} -e | ${QED} -d
 }
+
 
 when_encode_decode_with_data_passed_via_args () {
     local files=${files[@]:0:3}
     ${QED} -e ${files[@]} | ${QED} -d
 }
+
 
 when_encoded_files_are_renamed_mixed_duplicated () {
     local files=${files[@]:5:5}
@@ -66,8 +69,13 @@ when_encoded_files_are_renamed_mixed_duplicated () {
 }
 
 
-when_provided_with_option_images_on_browser () {
+when_provided_with_option_images_in_browser () {
     ${QED} -eq ${files[5]} | ${QED} -d
+}
+
+
+when_provided_with_option_play_slideshows () {
+    ${QED} -ep ${files[5]} | ${QED} -d
 }
 
 
@@ -82,6 +90,8 @@ when_encode_decode_with_data_passed_via_args
 
 when_encoded_files_are_renamed_mixed_duplicated 2
 
-when_provided_with_option_images_on_browser
+when_provided_with_option_images_in_browser
+
+when_provided_with_option_play_slideshows
 
 when_encode_decode_with_multiple_file_types

@@ -19,7 +19,9 @@ This is heavily inspired by https://github.com/alisinabh/paperify.
 ## Install
 ```sh
 # prerequisites
-$ brew install zbar qrencode jq imagemagick
+# ffmpeg is optional for '-p' option.
+$ brew install zbar qrencode jq imagemagick ffmpeg
+
 
 # clone
 $ git clone https://github.com/thyeem/qed.git
@@ -41,7 +43,7 @@ $ bash test.sh
 
       qed -e [-o OUT-DIR] [-s CELL-SIZE] [-m MARGIN]
              [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-t DATA-TYPE]
-             [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-q] FILE ...
+             [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-p] [-q] FILE ...
 
 
  . decode :: DIR -> [FILE]
@@ -50,7 +52,8 @@ $ bash test.sh
 
 
  options:
-      -q    Open output images to browser when encoding is finished"
+      -p    Create and play QRcode slideshows after encoding is finished
+      -q    Open output QRcode images in browser after encoding is finished
       -s    Set cell size of QRcode"         (default: 15)
       -m    Set margin of QRcode             (recommended 4+, default: 8)
       -1    Set foreground color of QRcode   (6-hexadecimal, default: 000000)
@@ -60,7 +63,6 @@ $ bash test.sh
       -l    Set QR error correction level    (one of [L,M,Q,H], default: L)
       -t    Set type of input data           (one of [A,B,D,K,N], default: B)
             A-Alphanumeric, B-Binary, D-Databits, K-Kanji, and N-Numeric
-
 ```
 
 
@@ -95,6 +97,9 @@ $ cat FILE | qed -e | qed -d | xargs cat | qed -e | qed -d | xargs qed -e | qed 
 # pretty sure that both are the same!
 # $(curl -s google.com) == $(cat /tmp/google)
 $ curl -s google.com | qed -e | qed -d | xargs cat > /tmp/google
+
+# open a video (QR code slideshows) when encoding is finished
+$ qed -e -p FILE        # or -ep
 
 # open QR code images on browser when encoding is finished
 $ qed -e -q FILE        # or -eq

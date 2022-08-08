@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # PREREQUISITE ----------------------------------------
-# $ brew install zbar qrencode jq imagemagick
+# $ brew install zbar qrencode jq imagemagick ffmpeg
 
 # EDIT-ZONE -------------------------------------------
 
@@ -38,16 +38,17 @@ QR_RESIZE_RATIO=25%
 # default type of input data: one of [A,B,D,K,N]
 QR_DATA_TYPE=B
 
+# default framerate when playing slideshow
+SLIDE_SHOW_FRAMERATE=0.5
+
 
 # HEADER BYTES DEFINITION -------------------------------------------------
 #
 # These bytes in the header are to provide some information when decoded.
-# You can change the size as you like except for 'capcode'
 #
-# header(HEADER_BYTES) := [hash:HASH_ID_BYTES(changeable)]
-#                       + [capcode:4-byte(fixed)]
-#                       + [index:INDEX_BYTES(changeable)]
-#                       + [size:INDEX_BYTES(changeable)]
+# header(HEADER_BYTES) := [hash:HASH_ID_BYTES]
+#                       + [index:INDEX_BYTES]
+#                       + [size:INDEX_BYTES]
 #
 # 'capcode' or Capaicty-Code means the amount of data can be stored.
 # This consists of version, error correction level and the data type
@@ -61,7 +62,6 @@ QR_DATA_TYPE=B
 # datatype: one of [A,B,D,K,N]
 # alphanumeric, binary, databits, kanji, and numeric, in the order listed.
 #
-
 
 HASH_ID_BYTES=6
 
@@ -163,14 +163,6 @@ assert-file () {
     # -> void
     # <- $1: filepath
     are-you-sure $1 && rm -f $1; :> $1
-}
-
-
-set-value-or-default () {
-    # -> value
-    # <- $1: defined variable
-    # <- $2: default value (as fallback)
-    echo -n ${1:-$2}
 }
 
 
@@ -293,18 +285,39 @@ write-header-and-encode () {
 }
 
 
+create-video-and-play-slideshow () {
+    # -> void
+    # <- $1: video-file-basename
+    local mp4="$1.mp4"
+    local n=$(ls -1 *.png | wc -l)
+    local t=$(echo "scale=0;1/$SLIDE_SHOW_FRAMERATE*$n+2" | bc)
+    stderr-msg "generating $mp4"
+
+    # converting encoded images into video file
+    ffmpeg -y -hide_banner -loglevel warning \
+              -loop 1                           \
+              -framerate $SLIDE_SHOW_FRAMERATE  \
+              -t $t                             \
+              -pattern_type glob -i '*.png'     \
+              -s hd720                          \
+              $mp4
+    stderr-msg "opening $mp4"
+    open $mp4
+}
+
+
 quick-view-on-browser () {
     # -> void
     # <- $1: html-file-basename
     local html="$1.html"
-    assert-file $html
-    echo -e "<!DOCTYPE html>" >> $html
+    echo -e "<!DOCTYPE html>" > $html
     echo -e "<head><title>qed-encoded</title></head>" >> $html
     echo -e "<body><center>" >> $html
     for f in $(ls -1 | sort); do
         echo -e "<p><img src=\"$(abspath $f)\" width="1000"></p>" >> $html
     done
     echo -e "</center></body><html>" >> $html
+    stderr-msg "opening $html"
     open $html
 }
 
@@ -350,8 +363,11 @@ encode () {
 
     stderr-msg "encoding output -> $1"
 
-    # quick-view encoded images on browser if set -q
-    [[ ! -z $view ]] && quick-view-on-browser "$1-$(random-hex 6)"
+    # quick-view encoded images on browser (if -q is set)
+    [[ -n $view ]] && quick-view-on-browser "$1-$capcode"
+
+    # play slideshow after generating video from images (if -p is set)
+    [[ -n $slideshow ]] && create-video-and-play-slideshow "$1-$capcode"
 }
 
 
@@ -447,7 +463,7 @@ print-help () {
 
       $this -e [-o OUT-DIR] [-s CELL-SIZE] [-m MARGIN]
              [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-t DATA-TYPE]
-             [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-q] FILE ...
+             [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-p] [-q] FILE ...
 
 
  . decode :: DIR -> [FILE]
@@ -456,7 +472,8 @@ print-help () {
 
 
  options:
-      -q    Open output images to browser when encoding is finished"
+      -p    Create and play QRcode slideshows after encoding is finished
+      -q    Open output QRcode images in browser after encoding is finished
       -s    Set cell size of QRcode"         (default: $QR_CELL_SIZE)
       -m    Set margin of QRcode             (recommended 4+, default: $QR_MARGIN)
       -1    Set foreground color of QRcode   (6-hexadecimal, default: $QR_FOREGROUND)
@@ -475,12 +492,13 @@ HELP
 # env setting
 # --------------
 # process options
-while getopts edqs:m:o:0:1:r:v:l:t: flag
+while getopts edqps:m:o:0:1:r:v:l:t: flag
 do
     case "${flag}" in
         e) enc=${OPTARG:-set};;
         d) dec=${OPTARG:-set};;
         q) view=${OPTARG:-set};;
+        p) slideshow=${OPTARG:-set};;
         s) size=${OPTARG};;
         m) margin=${OPTARG};;
         o) out=${OPTARG};;
@@ -495,21 +513,19 @@ done
 shift $((OPTIND - 1))
 
 # set fallbacks
-out=$(      set-value-or-default  $out       $(sane-temp))
-size=$(     set-value-or-default  $size      $QR_CELL_SIZE)
-margin=$(   set-value-or-default  $margin    $QR_MARGIN)
-fcolor=$(   set-value-or-default  $fcolor    $QR_FOREGROUND)
-bcolor=$(   set-value-or-default  $bcolor    $QR_BACKGROUND)
-ratio=$(    set-value-or-default  $ratio     $QR_RESIZE_RATIO)
-version=$(  set-value-or-default  $version   $QR_VERSION)
-level=$(    set-value-or-default  $level     $QR_ERROR_CORRECTION)
-datatype=$( set-value-or-default  $datatype  $QR_DATA_TYPE)
-
+out=${out:-$(sane-temp)}
+size=${size:-$QR_CELL_SIZE}
+margin=${margin:-$QR_MARGIN}
+fcolor=${fcolor:-$QR_FOREGROUND}
+bcolor=${bcolor:-$QR_BACKGROUND}
+ratio=${ratio:-$QR_RESIZE_RATIO}
+version=${version:-$QR_VERSION}
+level=${level:-$QR_ERROR_CORRECTION}
+datatype=${datatype:-$QR_DATA_TYPE}
 
 capcode=$(gen-capcode $version $level $datatype)
 
 bytes=$(query-max-qr-encoding-byte $capcode)
-
 
 [[ $bytes == "null" ]] && \
     error "failed to get QR-max-encoding-byte." \
@@ -528,7 +544,7 @@ if [ ! -p /dev/stdin ] && [ $# -eq 0 ]; then
 
 else
     # when encode-mode: ---------------------------------------------------
-    if [ ! -z $enc ] && [ -z $dec ]; then
+    if [ -n $enc ] && [ -z $dec ]; then
 
         # when used with <stdin>: cat FILE | qed -e
         if [ -p /dev/stdin ]; then
@@ -572,7 +588,7 @@ else
 
 
     # when decode-mode: ---------------------------------------------------
-    elif [ -z "$enc" ] && [ ! -z "$dec" ]; then
+    elif [ -z $enc ] && [ -n $dec ]; then
 
         # when used with <stdin>: echo DIR | qed -d
         if [ -p /dev/stdin ]; then
