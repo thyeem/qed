@@ -2,7 +2,7 @@
 
 
 # PREREQUISITE ----------------------------------------
-# $ brew install zbar qrencode jq imagemagick ffmpeg
+# $ brew install zbar qrencode imagemagick ffmpeg
 
 # EDIT-ZONE -------------------------------------------
 
@@ -11,9 +11,6 @@ SPLITTER=split
 
 # hasher binary
 HASHER=sha256sum
-
-# file defining max-byte of QRcode
-QR_MAX_BYTES_DEF="$(dirname $0)/qr_alltype_capacity.json"
 
 # default QR-error-correction-level: one of [L,M,Q,H]
 QR_ERROR_CORRECTION=L
@@ -130,7 +127,7 @@ hash-id () {
     # -- get a hash value using a given hasher
     #
     # -> sized hex-string
-    # <- $1: buf - if not provided, then used <stdin>
+    # <- $1: buf - if not provided, use <stdin>
     if [ $# -gt 0 ]; then
         # when used with args: hash-id STRING
         echo -n $(echo "$1" | $HASHER | head -c $HASH_ID_BYTES)
@@ -229,12 +226,17 @@ gen-capcode () {
 }
 
 
-query-max-qr-encoding-byte () {
+find-max-qr-encoding-byte () {
     # -> max-QR-storage-byte number
     # <- $1: capcode (expected 4-byte like '38LB')
     local datatype=$(select-data-type $datatype)
-    local filter=\"${1:0:2}_${1:2:1}_$datatype\"
-    echo -n $(cat ${QR_MAX_BYTES_DEF} | jq ".$filter")
+    local filter="${1:0:2}_${1:2:1}_$datatype"
+    grep -A 1 "^__QR_MAX_BYTES_DEF__$" $0 | tail -1             \
+                                          | base64 -d           \
+                                          | gunzip -c           \
+                                          | grep "$filter"      \
+                                          | awk -F: '{print$2}' \
+        || error "problems finding QRcode max-encoding bytes: $filter"
 }
 
 
@@ -297,8 +299,9 @@ create-video-and-play-slideshow () {
     stderr-msg "generating $mp4"
 
     # converting encoded images into video file
-    ffmpeg -y                                \
-           -hide_banner -loglevel warning    \
+    ffmpeg -y -hide_banner                   \
+           -loglevel error                   \
+           -stats                            \
            -loop 1                           \
            -framerate $SLIDE_SHOW_FRAMERATE  \
            -t $t                             \
@@ -307,7 +310,6 @@ create-video-and-play-slideshow () {
            -s hd720                          \
            $mp4                              \
         || error "occurred problem while creating the slideshow: $mp4"
-
     stderr-msg "opening $mp4"
     open $mp4
 }
@@ -395,10 +397,10 @@ decode-qrcode-image () {
     # parse header
     local header=$(cat _ | head -c $HEADER_BYTES)
     stderr-msg -n \
-        "processing  ${header:0:$HASH_ID_BYTES}" \
-        "[${header:$HASH_ID_BYTES:$INDEX_BYTES} /" \
-        "${header:$((HEADER_BYTES-$INDEX_BYTES)):$INDEX_BYTES}]" \
-        " <<  $1"
+               "processing  ${header:0:$HASH_ID_BYTES}" \
+               "[${header:$HASH_ID_BYTES:$INDEX_BYTES} /" \
+               "${header:$((HEADER_BYTES-$INDEX_BYTES)):$INDEX_BYTES}]" \
+               " <<  $1"
     cat _ | tail -c +$((HEADER_BYTES + 1)) > "$2/$header"
     rm -f __ _
 }
@@ -419,8 +421,8 @@ merge-decoded-files () {
 
     # check if the decoded is valid
     local validity=$( \
-        [[ $2 == $(cat $merged | hash-id) ]] && echo -e $(green true) \
-                                             || echo -e $(red false))
+                      [[ $2 == $(cat $merged | hash-id) ]] && echo -e $(green true) \
+                              || echo -e $(red false))
     stderr-msg -n
     stderr-msg "decoding output -> $merged    (validity: $validity)"
     stderr-msg
@@ -531,7 +533,7 @@ datatype=${datatype:-$QR_DATA_TYPE}
 
 capcode=$(gen-capcode $version $level $datatype)
 
-bytes=$(query-max-qr-encoding-byte $capcode)
+bytes=$(find-max-qr-encoding-byte $capcode)
 
 [[ $bytes == "null" ]] && \
     error "failed to get QR-max-encoding-byte." \
@@ -547,7 +549,7 @@ assert-dir $out
 # --------------
 if [ ! -p /dev/stdin ] && [ $# -eq 0 ]; then
     print-help
-
+    exit 0
 else
     # when encode-mode: ---------------------------------------------------
     if [ -n $enc ] && [ -z $dec ]; then
@@ -568,8 +570,9 @@ else
                    "$bcolor"
             stderr-msg
             echo "$out"
+            exit 0
 
-        # when used with args: qed -e FILE1 FILE2 FILE3 ...
+            # when used with args: qed -e FILE1 FILE2 FILE3 ...
         else
             for f in "${@}"; do
                 popd &>/dev/null; pushd `pwd` &>/dev/null;
@@ -590,16 +593,17 @@ else
             done
             stderr-msg
             echo "$out"
+            exit 0
         fi
 
-    # when decode-mode: ---------------------------------------------------
+        # when decode-mode: ---------------------------------------------------
     elif [ -z $enc ] && [ -n $dec ]; then
 
         # when used with <stdin>: echo DIR | qed -d
         if [ -p /dev/stdin ]; then
             dir="$(</dev/stdin)"
 
-        # when used with args: qed -d DIR
+            # when used with args: qed -d DIR
         else
             dir=$1
             [[ ! -d $dir ]] && error "used illegal directory: $dir"
@@ -607,10 +611,13 @@ else
         fi
         [ -z $dir ] && error "empty input: nothing to decode"
         decode $dir $out
-
+        exit 0
     else
         error "choose either '-e' for encode or '-d' for decode."
     fi
 fi
 
 # q.e.d.
+
+__QR_MAX_BYTES_DEF__
+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
