@@ -1,10 +1,9 @@
 #!/bin/bash
 
-
-# PREREQUISITE ----------------------------------------
+# Prerequisite ----------------------------------------
 # $ brew install zbar qrencode imagemagick ffmpeg
 
-# EDIT-ZONE -------------------------------------------
+# Edit-Zone -------------------------------------------
 
 # splitter binary
 SPLITTER=split
@@ -12,42 +11,51 @@ SPLITTER=split
 # hasher binary
 HASHER=sha256sum
 
+# file compressor binary
+ZIPPER=gzip
+
 # default QR-error-correction-level: one of [L,M,Q,H]
 QR_ERROR_CORRECTION=L
 
 # default minimum of QR-version: an integer between 1 and 40
 QR_VERSION=38
 
+# default type of input data: one of [A,B,K]
+QR_DATA_TYPE=B
+
 # default QR-cell size
 QR_CELL_SIZE=15
 
-# default cell margin in QRcode area
+# default cell margin in QR Code area
 QR_MARGIN=8
 
-# default foreground-color of QRcode [6-hexadecimal]
+# default foreground-color of QR Code [6-hexadecimal]
 QR_FOREGROUND="000000"
 
-# default background-color of QRcode [6-hexadecimal]
+# default background-color of QR Code [6-hexadecimal]
 QR_BACKGROUND="ffffff"
 
 # default image ratio to original when resizing
 QR_RESIZE_RATIO=25%
 
-# default type of input data: one of [A,B,D,K,N]
-QR_DATA_TYPE=B
-
 # default framerate when playing slideshow
 SLIDE_SHOW_FRAMERATE=0.5
 
 
-# HEADER BYTES DEFINITION -------------------------------------------------
-#
-# These bytes in the header are to provide some information when decoded.
+# Header Definition ---------------------------------------------------
+
+# the header bytes are to provide some information when decoded.
 #
 # header(HEADER_BYTES) := [hash:HASH_ID_BYTES]
 #                       + [index:INDEX_BYTES]
 #                       + [size:INDEX_BYTES]
-#
+
+HASH_ID_BYTES=6
+
+INDEX_BYTES=3
+
+HEADER_BYTES=$(($HASH_ID_BYTES + ${INDEX_BYTES}*2))
+
 # 'capcode' or Capaicty-Code means the amount of data can be stored.
 # This consists of version, error correction level and the data type
 #
@@ -57,34 +65,37 @@ SLIDE_SHOW_FRAMERATE=0.5
 #
 # version: one of [L,M,Q,H]
 # error-correction-level: 1 to 40 (padded two-digit, %02d)
-# datatype: one of [A,B,D,K,N]
-# alphanumeric, binary, databits, kanji, and numeric, in the order listed.
-#
+# datatype: one of [A,B,K]
+#   A for alphanumeric (A-Z0-9 + some specials)
+#   B for binary (8-bit bytes)
+#   K for kanji (kanji byte value)
 
-HASH_ID_BYTES=6
-
-INDEX_BYTES=3
-
-HEADER_BYTES=$(($HASH_ID_BYTES + ${INDEX_BYTES}*2))
-
-
-# -------------------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 stderr-msg () {
     # -> stderr messages
     # <- $@: all messages passed
-    >&2 echo
-    >&2 echo -e "$@" "\t"
+    if [[ -n $verbose || $1 -gt 0 ]]; then
+        shift
+        >&2 echo
+        >&2 echo -e "$@" "\t"
+    fi
 }
 
 
 error () {
     # -> exit status
     # <- $@: all messages passed
-    stderr-msg $(red error) "\t" $@
+    stderr-msg 1 $(red error) "\t" $@
     exit 1
 }
 
+ok () {
+    # -> exit status
+    # <- $1: ok message
+    stderr-msg 1 -n $(green ok) "\t"
+    echo $1
+}
 
 red () {
     # -> ansi-escaped text
@@ -127,27 +138,25 @@ hash-id () {
     # -- get a hash value using a given hasher
     #
     # -> sized hex-string
-    # <- $1: buf - if not provided, use <stdin>
+    # <- $1: filename - if not provided, use stdin
     if [ $# -gt 0 ]; then
         # when used with args: hash-id STRING
-        echo -n $(echo "$1" | $HASHER | head -c $HASH_ID_BYTES)
+        echo -n $($HASHER "$1" | head -c $HASH_ID_BYTES)
     else
-        # when used with <stdin>: cat FILE | hash-id
+        # when used with stdin: cat FILE | hash-id
         echo -n $(cat - | $HASHER | head -c $HASH_ID_BYTES)
     fi
 }
 
 
-random-hex () {
-    # -> sized hex-string
-    # <- $1: size
-    echo -n $(cat /dev/urandom | head -c 32 | $HASHER | head -c $1)
+random-bytes () {
+    echo -n $(cat /dev/urandom | head -c 32)
 }
 
 
-sane-temp() {
-    # -> random string
-    echo -n "/tmp/$(basename $(mktemp))"
+tmp-filepath () {
+    # -> tmp filepath string
+    echo -n "/tmp/$(random-bytes | $HASHER | head -c 16)"
 }
 
 
@@ -168,16 +177,18 @@ assert-file () {
 are-you-sure () {
     # -> exit status
     # <- $1: filepath
-    if [ -e $1 ]; then
-        read -n 1 -rp "Are you sure to delete $1? [y/N] "
+    if [ -e "$1" ]; then
+        >&2 echo
+        read -n 1 -rp "Are you sure to delete $1? [y/N] " < /dev/tty
         >&2 echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             return 0
+        else
+            exit 1
         fi
     else
         return 0
     fi
-    exit 1
 }
 
 
@@ -209,15 +220,13 @@ select-data-type () {
     case $1 in
         A) echo -n "Alphanumeric";;
         B) echo -n "Binary";;
-        D) echo -n "Databits";;
         K) echo -n "Kanji";;
-        N) echo -n "Numeric";;
         *) error "no such value for data type: $1";;
     esac
 }
 
 
-gen-capcode () {
+get-capcode () {
     # -> capcode-string
     # <- $1: version
     # <- $2: correction level
@@ -227,16 +236,21 @@ gen-capcode () {
 
 
 find-max-qr-encoding-byte () {
+    # -- find maximum bytes that can be encoded with the given capcode,
+    # -- combinations of version, error correction level, and datatype
+    # --
     # -> max-QR-storage-byte number
-    # <- $1: capcode (expected 4-byte like '38LB')
+    # <- $1: capcode
     local datatype=$(select-data-type $datatype)
+    [[ -n $datatype ]] || error "no such capcode exists: $1"
+
     local filter="${1:0:2}_${1:2:1}_$datatype"
     grep -A 1 "^__QR_MAX_BYTES_DEF__$" $0 | tail -1             \
                                           | base64 -d           \
                                           | gunzip -c           \
                                           | grep "$filter"      \
                                           | awk -F: '{print$2}' \
-        || error "problems finding QRcode max-encoding bytes: $filter"
+        || error "problems finding QR Code max-encoding bytes: $filter"
 }
 
 
@@ -244,16 +258,16 @@ split-data () {
     # -- split the given buffer if large enough
     #
     # -> void
-    # <- $1: buf
+    # <- $1: in
     # <- $2: bytes
     # <- $3: prefix
-    echo "$1" | $SPLITTER -b $(($2 - $HEADER_BYTES)) -a ${INDEX_BYTES} - "$3" \
+    $SPLITTER -b $(($2 - $HEADER_BYTES)) -a ${INDEX_BYTES} "$1" "$3" \
         || error "occurred problem while splitting data in: $(pwd)"
 }
 
 
-write-header-and-encode () {
-    # -- write a header to each token and encode it into a QRcode
+write-header-and-qrencode () {
+    # -- write a header to each token and encode it into a QR Code
     #
     # -> void
     # <- $1: _hash
@@ -263,18 +277,19 @@ write-header-and-encode () {
     # <- $5: level
     # <- $6: fcolor
     # <- $7: bcolor
+    stderr-msg 0 -n "."
     local total=$(printf %0${INDEX_BYTES}d $(ls -1 _ | wc -l))
     local it=1
     for f in $(ls -1 _ | sort); do
         local o="$f.png"
         local header="$1$(printf %0${INDEX_BYTES}d $it)$total"
-        stderr-msg -n "processing  $1" \
-                      "[$(printf %0${INDEX_BYTES}d $it) / $total]  >>  $o"
+        stderr-msg 0 -n "processing  $1" \
+                        "[$(printf %0${INDEX_BYTES}d $it) / $total]  >>  $(pwd)/$o"
 
         # write header to split file
         echo -n $header | cat - "_/$f" > _/_ && mv _/_ "_/$f"
 
-        # encode each split file into QRcode
+        # encode each split file into QR Code
         cat "_/$f" | qrencode -8               \
                               -s $2            \
                               -m $3            \
@@ -283,7 +298,7 @@ write-header-and-encode () {
                               -o $o            \
                               --foreground=$6  \
                               --background=$7  \
-            || error "occurred problem while encoding data into QRcode: $(pwd)/$f"
+            || error "occurred problem while encoding data into QR Code: $(pwd)/$f"
         it=$((it+1))
     done
     rm -rf _
@@ -296,7 +311,7 @@ create-video-and-play-slideshow () {
     local mp4="$1.mp4"
     local n=$(ls -1 *.png | wc -l)
     local t=$(echo "scale=0;1/$SLIDE_SHOW_FRAMERATE*$n+2" | bc)
-    stderr-msg "generating $mp4"
+    stderr-msg 0 "generating $mp4"
 
     # converting encoded images into video file
     ffmpeg -y -hide_banner                   \
@@ -310,7 +325,7 @@ create-video-and-play-slideshow () {
            -s hd720                          \
            $mp4                              \
         || error "occurred problem while creating the slideshow: $mp4"
-    stderr-msg "opening $mp4"
+    stderr-msg 0 "opening $mp4"
     open $mp4
 }
 
@@ -326,7 +341,7 @@ quick-view-on-browser () {
         echo -e "<p><img src=\"$(abspath $f)\" width="1000"></p>" >> $html
     done
     echo -e "</center></body><html>" >> $html
-    stderr-msg "opening $html"
+    stderr-msg 0 "opening $html"
     open $html
 }
 
@@ -336,71 +351,92 @@ encode () {
     # -- single encoding process is performed for a given file
     #
     # -> void
-    # <- $1:    output dirname
-    # <- $2:    buf
-    # <- $3:    buf-name
-    # <- $4:    bytes
-    # <- $5:    size
-    # <- $6:    margin
-    # <- $7:    version
-    # <- $8:    level
-    # <- $9:    fcolor
-    # <- ${10}: bcolor
+    # <- $1: out
+    # <- $2: in
+    # <- $3: size
+    # <- $4: margin
+    # <- $5: version
+    # <- $6: level
+    # <- $7: fcolor
+    # <- $8: bcolor
 
-    # print getting encode started
-    stderr-msg -n "."
-    stderr-msg "encoding input <- $3"
+    # get capcode or capaicty-code, expected 4-byte like '40LB',
+    # means the amount of data can be stored.
+    capcode=$(get-capcode $version $level $datatype)
 
-    # get a unique id for data
+    # get maximum bytes that can be encoded with the given capcode
+    bytes=$(find-max-qr-encoding-byte $capcode)
+
+    # guard on 'bytes' variable
+    [[ -z $bytes ]] && \
+        error "failed to get QR-max-encoding-byte." \
+              "\n\t check if the values of -l, -t, and -V are set correctly."
+
+    # get a hash-id-key for data
     local _hash=$(hash-id "$2")
 
-    assert-dir "$1/_"
-    split-data "$2" $4 "$1/_/${_hash}-"
+    # tmp working directory
+    t=$(tmp-filepath)
+    assert-dir "$t/_"
+    cd $t
 
-    cd $1
+    # split the given buffer if it is large enough
+    split-data "$2" $bytes "$t/_/${_hash}-"
 
-    write-header-and-encode $_hash \
-                            $5     \
-                            $6     \
-                            $7     \
-                            $8     \
-                            $9     \
-                            ${10}
+    # try QR-encoding with the generated header
+    write-header-and-qrencode $_hash \
+                              $3     \
+                              $4     \
+                              $5     \
+                              $6     \
+                              $7     \
+                              $8
 
-    stderr-msg "completed.  each QRcode encoded in:" \
-               "$4 bytes (including ${HEADER_BYTES}-byte header)"
-
-    stderr-msg "encoding output -> $1"
+    stderr-msg 0 "completed.  each QR Code encoded in:" \
+                 "$bytes bytes (including ${HEADER_BYTES}-byte header)\n"
 
     # quick-view encoded images on browser (if -q is set)
-    [[ -n $view ]] && quick-view-on-browser "$1-$capcode"
+    [[ -n $view ]] && quick-view-on-browser "$t-$capcode"
 
     # play slideshow after generating video from images (if -p is set)
-    [[ -n $slideshow ]] && create-video-and-play-slideshow "$1-$capcode"
+    [[ -n $slideshow ]] && create-video-and-play-slideshow "$t-$capcode"
+
+    # output: write to file or to stdout in tar format
+    if [ -n "$1" ]; then
+        ls -1 *.png | tar -cf "$1" -T - \
+            && ok "$1" \
+            || error "problem occurred while writing to file: $1"
+    else
+        ls -1 *.png | tar -c -T - \
+            || error "problem occurred while writing to stdout"
+    fi
 }
 
 
 decode-qrcode-image () {
     # -> void
     # <- $1: qrcode image file
-    # <- $2: dirname where restored files are collected
+    # <- $2: dirname where decoded files are collected
     # <- $3: resize ratio to original
 
     # resize
     convert -resize "${3}%" $1 __ \
-        || error "occurred problem during resizing Qrcode image: $1"
+        || error "occurred problem during resizing QR Code image: $1"
 
     # decode each iamge using zbar
     zbarimg --raw --quiet -Sbinary __ > _ \
-        || error "occurred problem during decoding QRcode images: $1"
+        || error "occurred problem during decoding QR Code image: $1"
 
     # parse header
     local header=$(cat _ | head -c $HEADER_BYTES)
-    stderr-msg -n \
-               "processing  ${header:0:$HASH_ID_BYTES}" \
-               "[${header:$HASH_ID_BYTES:$INDEX_BYTES} /" \
-               "${header:$((HEADER_BYTES-$INDEX_BYTES)):$INDEX_BYTES}]" \
-               " <<  $1"
+    [[ ${#header} -eq $HEADER_BYTES ]] \
+        || error "something wrong with the header: $header"
+
+    stderr-msg 0 -n \
+                 "processing  ${header:0:$HASH_ID_BYTES}" \
+                 "[${header:$HASH_ID_BYTES:$INDEX_BYTES} /" \
+                 "${header:$((HEADER_BYTES-$INDEX_BYTES)):$INDEX_BYTES}]" \
+                 " <<  $1"
     cat _ | tail -c +$((HEADER_BYTES + 1)) > "$2/$header"
     rm -f __ _
 }
@@ -413,107 +449,121 @@ find-hashes-of-uniq-files () {
 }
 
 merge-decoded-files () {
-    # -> merged file
-    # <- $1: output dirname
+    # -> void
+    # <- $1: filepath of merged files
     # <- $2: hash value that the merged file is expected to have
-    local merged="$1-$2"
-    ls -1 | grep $_hash | sort | xargs cat > $merged
+    local f="$1/$2"
+    ls -1 | grep $2 | sort | xargs cat > $f \
+        || error "problem occurred during merging decoded files: $f"
 
     # check if the decoded is valid
-    local validity=$( \
-                      [[ $2 == $(cat $merged | hash-id) ]] && echo -e $(green true) \
-                              || echo -e $(red false))
-    stderr-msg -n
-    stderr-msg "decoding output -> $merged    (validity: $validity)"
-    stderr-msg
-    echo -n $merged
+    [[ "$2" == "$(cat $f | hash-id)" ]] \
+        || error "Not matched hash value of file: $f" \
+                 "\n\t expected $2, but got $(cat $f | hash-id)"
 }
 
 decode () {
     # -- the outermost decoding wrapper function
-    #
-    # -> filepath of merged files
-    # <- $1: dir containing files to be decoded
-    # <- $2: output dirname where the merged file will be located
+    #files
+    # <- $1: out: output tarball filename
+    # <- $2: dir containing files to be decoded
+    stderr-msg 0 -n "."
+    cd $2
 
-    # print getting encode started
-    stderr-msg -n "."
-    stderr-msg "decoding input <- $(abspath $1)"
-
-    cd $1
-
-    # where restored files are collected
-    local restored=".$(random-hex 16)"
-    assert-dir "$restored"
+    # where decoded files are collected
+    local decoded="$(tmp-filepath)"
+    assert-dir "$decoded"
 
     # decoding from images
-    for f in *; do
-        decode-qrcode-image $f $restored $ratio
+    for f in $(find . | file --mime -f -       \
+                      | grep "image/*"         \
+                      | awk -F: '{print$1}'    \
+                      | sort); do
+        decode-qrcode-image $f $decoded $ratio \
+            || error "failed to decode QR code image: $f"
     done
 
-    # move to the directory of restored files
-    cd "$restored"
+    cd "$decoded"
 
     # merge files
+    local merged=$(tmp-filepath)
+    assert-dir $merged
     for _hash in $(find-hashes-of-uniq-files); do
-        echo $(merge-decoded-files $2 $_hash)
+        merge-decoded-files $merged $_hash \
+            || error "failed to merge files with expected hash of: $_hash"
     done
 
+    cd "$merged"
+
+    # extract decoded archives
+    for f in *; do
+        tar -xf $f \
+            || error "failed to extract decoded archive: $f"
+        rm -f $f
+    done
+
+    # output
+    stderr-msg 0
+    if [ -n "$1" ]; then
+        mv -f $merged "$1"
+        ok "$1"
+    else
+        find . -type f | sort | xargs cat
+    fi
 }
 
 
 print-help () {
     local this=$(basename $0)
     cat << HELP
- qed - backup using QR encode/decode
+ qed - encode data of any size into tarballs of QR Code
 
- . encode :: [FILE] -> DIR
+ Usage: $this [-hdpqzv] [-o output] [-s cell-size] [-m margin]
+            [-V version] [-l error-correction-level] [-t data-type]
+            [-1 qr-fg-color] [-0 qr-bg-color] [-r resize-ratio ] filepath
 
-      $this -e [-o OUT-DIR] [-s CELL-SIZE] [-m MARGIN]
-             [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-t DATA-TYPE]
-             [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-p] [-q] FILE ...
-
-
- . decode :: DIR -> [FILE]
-
-      $this -d [-r RESIZE-RATIO(%) ] [-o OUT-FILE] DIR
-
-
- options:
-      -p    Create and play QRcode slideshows after encoding is finished
-      -q    Open output QRcode images in browser after encoding is finished
-      -s    Set cell size of QRcode"         (default: $QR_CELL_SIZE)
-      -m    Set margin of QRcode             (recommended 4+, default: $QR_MARGIN)
-      -1    Set foreground color of QRcode   (6-hexadecimal, default: $QR_FOREGROUND)
-      -0    Set background color of QRcode   (6-hexadecimal, default: $QR_BACKGROUND)
-      -r    Set resize-ratio if needed       (6-hexadecimal, default: $QR_RESIZE_RATIO)
-      -v    Set version of QRcode            (1 to 40, default: $QR_VERSION)
-      -l    Set QR error correction level    (one of [L,M,Q,H], default: $QR_ERROR_CORRECTION)
-      -t    Set type of input data           (one of [A,B,D,K,N], default: $QR_DATA_TYPE)
-            A-Alphanumeric, B-Binary, D-Databits, K-Kanji, and N-Numeric
+      -h    print this message
+      -d    decode input
+      -p    create and play QR Code slideshows after encoding is finished
+      -q    open output QR Code images in browser after encoding is finished
+      -z    compress output tarball of QR code
+      -v    show in detail how the work is progressing
+      -o    set output file                  (default: '-' for stdout)
+      -s    set cell size of QR Code         (default: $QR_CELL_SIZE)
+      -m    set margin of QR Code            (recommended 4+, default: $QR_MARGIN)
+      -1    set foreground color of QR Code  (6-hexadecimal, default: $QR_FOREGROUND)
+      -0    set background color of QR Code  (6-hexadecimal, default: $QR_BACKGROUND)
+      -r    set resize-ratio if needed       (6-hexadecimal, default: $QR_RESIZE_RATIO)
+      -V    set version of QR Code           (1 to 40, default: $QR_VERSION)
+      -l    set error correction level       (one of [L,M,Q,H], default: $QR_ERROR_CORRECTION)
+      -t    set type of input data           (one of [A,B,K], default: $QR_DATA_TYPE)
+                                             A: Alphanumeric, B: Binary, and K: Kanji
 HELP
+    exit 0
 }
 
 
 
 # --------------
-# env setting
+# qed main
 # --------------
 # process options
-while getopts edqps:m:o:0:1:r:v:l:t: flag
+while getopts hdpqzvo:s:m:1:0:r:V:l:t: flag
 do
     case "${flag}" in
-        e) enc=${OPTARG:-set};;
-        d) dec=${OPTARG:-set};;
-        q) view=${OPTARG:-set};;
+        h) print-help;;
+        d) decode=${OPTARG:-set};;
         p) slideshow=${OPTARG:-set};;
+        q) view=${OPTARG:-set};;
+        z) zip=${OPTARG:-set};;
+        v) verbose=${OPTARG:-set};;
+        o) out=${OPTARG};;
         s) size=${OPTARG};;
         m) margin=${OPTARG};;
-        o) out=${OPTARG};;
-        0) bcolor=${OPTARG};;
         1) fcolor=${OPTARG};;
+        0) bcolor=${OPTARG};;
         r) ratio=${OPTARG};;
-        v) version=${OPTARG};;
+        V) version=${OPTARG};;
         l) level=${OPTARG};;
         t) datatype=${OPTARG};;
     esac
@@ -521,7 +571,6 @@ done
 shift $((OPTIND - 1))
 
 # set fallbacks
-out=${out:-$(sane-temp)}
 size=${size:-$QR_CELL_SIZE}
 margin=${margin:-$QR_MARGIN}
 fcolor=${fcolor:-$QR_FOREGROUND}
@@ -530,93 +579,84 @@ ratio=${ratio:-$QR_RESIZE_RATIO}
 version=${version:-$QR_VERSION}
 level=${level:-$QR_ERROR_CORRECTION}
 datatype=${datatype:-$QR_DATA_TYPE}
-
-capcode=$(gen-capcode $version $level $datatype)
-
-bytes=$(find-max-qr-encoding-byte $capcode)
-
-[[ $bytes == "null" ]] && \
-    error "failed to get QR-max-encoding-byte." \
-          "\n\t check if the values of -l, -t, and -v are set correctly."
-
-# clean and assert default output directory
-assert-dir $out
+[[ $out == "-" ]] && out=
 
 
+# decoding:
+if [[ -n $decode ]]; then
 
-# --------------
-# qed main
-# --------------
-if [ ! -p /dev/stdin ] && [ $# -eq 0 ]; then
-    print-help
-    exit 0
-else
-    # when encode-mode: ---------------------------------------------------
-    if [ -n $enc ] && [ -z $dec ]; then
+    # when used with stdin
+    if [[ -p /dev/stdin || $# -eq 0 ]]; then
+        in="$(tmp-filepath)"
+        assert-dir "$in"
+        cat - | tar -x -C "$in" &>/dev/null \
+            || error "entered an unacceptable format: must be a tarball or dir"
 
-        # when used with <stdin>: cat FILE | qed -e
-        if [ -p /dev/stdin ]; then
-            buf="$(</dev/stdin)"
-            buf_name="/dev/stdin"
-            encode "$out"       \
-                   "$buf"       \
-                   "$buf_name"  \
-                   "$bytes"     \
-                   "$size"      \
-                   "$margin"    \
-                   "$version"   \
-                   "$level"     \
-                   "$fcolor"    \
-                   "$bcolor"
-            stderr-msg
-            echo "$out"
-            exit 0
-
-            # when used with args: qed -e FILE1 FILE2 FILE3 ...
-        else
-            for f in "${@}"; do
-                popd &>/dev/null; pushd `pwd` &>/dev/null;
-                [[ ! -f $f ]] && error "file not found or illegal file: $f"
-
-                buf="$(cat $f)"
-                buf_name=$(abspath $f)
-                encode "$out"       \
-                       "$buf"       \
-                       "$buf_name"  \
-                       "$bytes"     \
-                       "$size"      \
-                       "$margin"    \
-                       "$version"   \
-                       "$level"     \
-                       "$fcolor"    \
-                       "$bcolor"
-            done
-            stderr-msg
-            echo "$out"
-            exit 0
-        fi
-
-        # when decode-mode: ---------------------------------------------------
-    elif [ -z $enc ] && [ -n $dec ]; then
-
-        # when used with <stdin>: echo DIR | qed -d
-        if [ -p /dev/stdin ]; then
-            dir="$(</dev/stdin)"
-
-            # when used with args: qed -d DIR
-        else
-            dir=$1
-            [[ ! -d $dir ]] && error "used illegal directory: $dir"
-
-        fi
-        [ -z $dir ] && error "empty input: nothing to decode"
-        decode $dir $out
-        exit 0
+    # when used with arguments
     else
-        error "choose either '-e' for encode or '-d' for decode."
+        f="$1"
+        [[ ! -e $f ]] && error "filepath not found: $f"
+        if [ -d $f ]; then
+            in=$f
+        else
+            tar -tf $f &>/dev/null \
+                || error "the target to be decoded must be a tarball or dir: $f"
+            in="$(tmp-filepath)"
+            assert-dir "$in"
+            tar -xf $f -C "$in"
+        fi
     fi
+
+    # check if there's anything to decode
+    [[ $(find $in | file --mime -f -     \
+                  | grep "image/*"       \
+                  | awk -F: '{print$1}'  \
+                  | wc -l) -gt 0 ]]      \
+        || error "nothing to decode: $1"
+
+    # prepare output name (if any). stdout by default
+    if [ -n "$out" ]; then
+        out=$(abspath $out)
+        are-you-sure $out && rm -rf $out
+    fi
+    decode "$out" "$in"
+
+
+# encoding:
+else
+    # when used with stdin
+    if [[ -p /dev/stdin || $# -eq 0 ]]; then
+        f="$(tmp-filepath)"
+        cat - > $f
+
+    # when used with arguments
+    else
+        f="$1"
+        [[ ! -e $f ]] && error "filepath not found: $f"
+    fi
+
+    # prepare output name (if any). stdout by default
+    if [ -n "$out" ]; then
+        out=$(abspath $out)
+        are-you-sure $out && rm -rf $out
+    fi
+
+    # prepare input file to encode
+    in="$(tmp-filepath).tar.gz"
+    cd $(dirname $f) && tar -c $(basename $f) | $ZIPPER -c > $in \
+        || error "problem occurred while archiving file: $f"
+
+    encode "$out"      \
+           "$in"       \
+           "$size"     \
+           "$margin"   \
+           "$version"  \
+           "$level"    \
+           "$fcolor"   \
+           "$bcolor"
 fi
 
+exit 0
 # q.e.d.
 
 __QR_MAX_BYTES_DEF__
