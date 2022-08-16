@@ -14,14 +14,11 @@ HASHER=sha256sum
 # file compressor binary
 ZIPPER=gzip
 
-# default QR-error-correction-level: one of [L,M,Q,H]
-QR_ERROR_CORRECTION=L
-
 # default minimum of QR-version: an integer between 1 and 40
 QR_VERSION=38
 
-# default type of input data: one of [A,B,K]
-QR_DATA_TYPE=B
+# default QR-error-correction-level: one of [L,M,Q,H]
+QR_ERROR_CORRECTION=L
 
 # default QR-cell size
 QR_CELL_SIZE=15
@@ -36,7 +33,7 @@ QR_FOREGROUND="000000"
 QR_BACKGROUND="ffffff"
 
 # default image ratio to original when resizing
-QR_RESIZE_RATIO=25%
+QR_RESIZE_RATIO=30%
 
 # default framerate when playing slideshow
 SLIDE_SHOW_FRAMERATE=0.5
@@ -59,16 +56,13 @@ HEADER_BYTES=$(($HASH_ID_BYTES + ${INDEX_BYTES}*2))
 # 'capcode' or Capaicty-Code means the amount of data can be stored.
 # This consists of version, error correction level and the data type
 #
-# capcode = [version:1-byte]
-#         + [error-coorection-level:2-byte]
-#         + [datatype:1-byte]
+# capcode = [version:2-byte]
+#         + [error-coorection-level:1-byte]
+#         + [datatype:1-byte]  (fixed to binary)
 #
-# version: one of [L,M,Q,H]
-# error-correction-level: 1 to 40 (padded two-digit, %02d)
-# datatype: one of [A,B,K]
-#   A for alphanumeric (A-Z0-9 + some specials)
-#   B for binary (8-bit bytes)
-#   K for kanji (kanji byte value)
+# error-correction-level: one of [L,M,Q,H]
+# version of QR code: 1 to 40 (padded two-digit, %02d)
+# datatype: others are not very useful, so it was fixed as binary
 
 # ---------------------------------------------------------------------
 
@@ -214,37 +208,20 @@ decimal-to-binary () {
 }
 
 
-select-data-type () {
-    # -> datatype string
-    # <- $1: datatype char
-    case $1 in
-        A) echo -n "Alphanumeric";;
-        B) echo -n "Binary";;
-        K) echo -n "Kanji";;
-        *) error "no such value for data type: $1";;
-    esac
-}
-
-
 get-capcode () {
     # -> capcode-string
     # <- $1: version
     # <- $2: correction level
-    # <- $3: datatype
-    echo -n "$(printf %02d $version)$level$datatype"
+    echo -n "$(printf %02d $version)$level"
 }
 
 
 find-max-qr-encoding-byte () {
-    # -- find maximum bytes that can be encoded with the given capcode,
-    # -- combinations of version, error correction level, and datatype
+    # -- find maximum bytes that can be encoded with the given capcode
     # --
     # -> max-QR-storage-byte number
     # <- $1: capcode
-    local datatype=$(select-data-type $datatype)
-    [[ -n $datatype ]] || error "no such capcode exists: $1"
-
-    local filter="${1:0:2}_${1:2:1}_$datatype"
+    local filter="${1:0:2}_${1:2:1}"
     grep -A 1 "^__QR_MAX_BYTES_DEF__$" $0 | tail -1             \
                                           | base64 -d           \
                                           | gunzip -c           \
@@ -360,9 +337,8 @@ encode () {
     # <- $7: fcolor
     # <- $8: bcolor
 
-    # get capcode or capaicty-code, expected 4-byte like '40LB',
-    # means the amount of data can be stored.
-    capcode=$(get-capcode $version $level $datatype)
+    # get capcode or capaicty-code, meaning the amount of data can be stored.
+    capcode=$(get-capcode $version $level)
 
     # get maximum bytes that can be encoded with the given capcode
     bytes=$(find-max-qr-encoding-byte $capcode)
@@ -410,6 +386,13 @@ encode () {
         ls -1 *.png | tar -c -T - \
             || error "problem occurred while writing to stdout"
     fi
+}
+
+
+adjust-resize-ratio () {
+    # -> auto-adjusted ratio
+    # <- $1: version of QR code
+    echo "auto-adjusted"
 }
 
 
@@ -519,7 +502,7 @@ print-help () {
  qed - encode data of any size into tarballs of QR Code
 
  Usage: $this [-hdpqzv] [-o output] [-s cell-size] [-m margin]
-            [-V version] [-l error-correction-level] [-t data-type]
+            [-V version] [-l error-correction-level]
             [-1 qr-fg-color] [-0 qr-bg-color] [-r resize-ratio ] filepath
 
       -h    print this message
@@ -536,8 +519,6 @@ print-help () {
       -r    set resize-ratio if needed       (6-hexadecimal, default: $QR_RESIZE_RATIO)
       -V    set version of QR Code           (1 to 40, default: $QR_VERSION)
       -l    set error correction level       (one of [L,M,Q,H], default: $QR_ERROR_CORRECTION)
-      -t    set type of input data           (one of [A,B,K], default: $QR_DATA_TYPE)
-                                             A: Alphanumeric, B: Binary, and K: Kanji
 HELP
     exit 0
 }
@@ -548,7 +529,7 @@ HELP
 # qed main
 # --------------
 # process options
-while getopts hdpqzvo:s:m:1:0:r:V:l:t: flag
+while getopts hdpqzvo:s:m:1:0:r:V:l: flag
 do
     case "${flag}" in
         h) print-help;;
@@ -565,7 +546,6 @@ do
         r) ratio=${OPTARG};;
         V) version=${OPTARG};;
         l) level=${OPTARG};;
-        t) datatype=${OPTARG};;
     esac
 done
 shift $((OPTIND - 1))
@@ -578,7 +558,6 @@ bcolor=${bcolor:-$QR_BACKGROUND}
 ratio=${ratio:-$QR_RESIZE_RATIO}
 version=${version:-$QR_VERSION}
 level=${level:-$QR_ERROR_CORRECTION}
-datatype=${datatype:-$QR_DATA_TYPE}
 [[ $out == "-" ]] && out=
 
 
@@ -660,4 +639,4 @@ exit 0
 # q.e.d.
 
 __QR_MAX_BYTES_DEF__
-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
+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
