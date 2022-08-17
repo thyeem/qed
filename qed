@@ -579,8 +579,8 @@ ratio=${ratio:-$QR_RESIZE_RATIO}
 version=${version:-$QR_VERSION}
 level=${level:-$QR_ERROR_CORRECTION}
 
-[[ $out == "-" ]] && out=
-[[ $ratio == "auto" ]] && ratio=$(adjust-resize-ratio $version)
+[[ "$out" == "-" ]] && out=
+[[ "$ratio" == "auto" ]] && ratio=$(adjust-resize-ratio $version)
 
 
 # when decoding:
@@ -596,8 +596,8 @@ if [[ -n $decode ]]; then
     # when used with arguments
     else
         f="$1"
-        [[ -e $f ]] || error "filepath not found: $f"
-        if [ -d $f ]; then
+        [[ -e "$f" ]] || error "filepath not found: $f"
+        if [ -d "$f" ]; then
             in=$f
         else
             tar -tf $f &>/dev/null \
@@ -633,7 +633,7 @@ else
     # when used with arguments
     else
         f="$1"
-        [[ -e $f ]] || error "filepath not found: $f"
+        [[ -e "$f" ]] || error "filepath not found: $f"
     fi
 
     # prepare output name (if any). stdout by default

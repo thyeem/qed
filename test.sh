@@ -44,17 +44,9 @@ error () {
 
 t () {
   msg
-  msg "$3"
-  msg "$4"
-  msg
-
-  local lhs=$(echo "$3" | head -c 32)
-  local rhs=$(echo "$4" | head -c 32)
-  if [ "$lhs" == "$rhs" ]; then
-      msg $1 "($2)" ... $(green passed)
-  else
-      error $1 "($2)" ... $(red failed)
-  fi
+  eval "$3"                                \
+      && msg $1 "($2)" ... $(green passed) \
+      || error $1 "($2)" ... $(red failed)
 }
 
 
@@ -73,8 +65,7 @@ when_encode_decode_with_data_passed_via_stdin () {
     for i in $(seq 0 5); do
         f=${files[i]}
         t "$FUNCNAME" $f \
-        "$(cat $f | $QED | $QED -d | sha256sum)" \
-        "$(sha256sum $f)"
+        "cat $f | $QED | $QED -d >/dev/null"
     done
 }
 
@@ -84,24 +75,21 @@ when_encode_decode_with_data_passed_via_args () {
     for i in $(seq 0 5); do
         f=${files[i]}
         t "$FUNCNAME" $f \
-        "$($QED $f | $QED -d | sha256sum)" \
-        "$(sha256sum $f)"
+        "$QED $f | $QED -d >/dev/null"
     done
 }
 
 when_provided_with_option_images_in_browser () {
     local f=${files[5]}
     t "$FUNCNAME" $f \
-    "$($QED -q $f | $QED -d | sha256sum)" \
-    "$(sha256sum $f)"
+    "$QED -q $f | $QED -d >/dev/null"
 }
 
 
 when_provided_with_option_play_slideshows () {
     local f=${files[5]}
     t "$FUNCNAME" $f \
-    "$($QED -p $f | $QED -d | sha256sum)" \
-    "$(sha256sum $f)"
+    "$QED -p $f | $QED -d >/dev/null"
 }
 
 
@@ -109,31 +97,34 @@ when_encoded_files_are_renamed_mixed_duplicated () {
     local o=$(tmp_filepath)
     local fs=${files[@]:3:3}
 
+    # generate QR images to target dir
     mkdir -p $o
     for f in $fs; do
         $QED $f | tar x -C $o
     done
 
-    # randomizes renames, and duplicates files encoded.
-    pushd . &> /dev/null
     cd $o
 
+    # intentionally corrupt directory configuration
     msg "random-renaming/duplicating endoded files..."
     msg
+    local r=
+    local q=
     for f in *; do
-        # how many times these deadly tasks
-        for _ in $(seq $1); do
-            r=$(random_bytes | sha256sum | head -c 16)
-            cp -f $f $r
-        done
-        rm -f $f
+        # renames file with random string
+        r=$(random_bytes | sha256sum | head -c 16)
+        cp -f $f $r
+
+        # duplicates and relocates files
+        x=$(random_bytes | sha256sum | head -c 6)
+        y=$(random_bytes | sha256sum | head -c 6)
+        mkdir -p "$x" && cp -f $r "$_"
+        mkdir -p "$x/$y" && mv -f $f "$_/$r"
     done
-    popd &> /dev/null
 
     # try to decode. let's go back to before!
-    t "$FUNCNAME" "" \
-    "$($QED -d $o | sha256sum)" \
-    "$(echo $fs | xargs ls | sort | xargs cat | sha256sum)"
+    t "$FUNCNAME" "dir-corruption-test" \
+    "$QED -d $o >/dev/null"
 }
 
 
@@ -143,8 +134,7 @@ when_encode_decode_with_full_combination_of_capcodes () {
     for v in $(seq 3 40); do
         for l in ${level[@]}; do
             t "$FUNCNAME" "$f:$l-$v-binary" \
-            "$(${QED} -V $v -l $l $f | ${QED} -d | sha256sum)" \
-            "$(sha256sum $f)"
+            "$QED -V $v -l $l $f | $QED -d >/dev/null"
         done
     done
 
@@ -154,8 +144,7 @@ when_encode_decode_with_full_combination_of_capcodes () {
 when_encode_decode_with_full_list_of_files () {
     for f in ${files[@]}; do
         t "$FUNCNAME" $f \
-        "$(${QED} $f | ${QED} -d | sha256sum)" \
-        "$(sha256sum $f)"
+        "$QED $f | $QED -d >/dev/null "
     done
 }
 
@@ -168,7 +157,7 @@ when_provided_with_option_images_in_browser
 
 when_provided_with_option_play_slideshows
 
-when_encoded_files_are_renamed_mixed_duplicated 2
+when_encoded_files_are_renamed_mixed_duplicated
 
 when_encode_decode_with_full_combination_of_capcodes
 
