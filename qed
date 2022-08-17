@@ -15,16 +15,16 @@ HASHER=sha256sum
 ZIPPER=gzip
 
 # default minimum of QR-version: an integer between 1 and 40
-QR_VERSION=38
+QR_VERSION=40
 
 # default QR-error-correction-level: one of [L,M,Q,H]
 QR_ERROR_CORRECTION=L
 
 # default QR-cell size
-QR_CELL_SIZE=15
+QR_CELL_SIZE=16
 
 # default cell margin in QR Code area
-QR_MARGIN=8
+QR_MARGIN=16
 
 # default foreground-color of QR Code [6-hexadecimal]
 QR_FOREGROUND="000000"
@@ -33,7 +33,7 @@ QR_FOREGROUND="000000"
 QR_BACKGROUND="ffffff"
 
 # default image ratio to original when resizing
-QR_RESIZE_RATIO=30%
+QR_RESIZE_RATIO=auto
 
 # default framerate when playing slideshow
 SLIDE_SHOW_FRAMERATE=0.5
@@ -47,7 +47,7 @@ SLIDE_SHOW_FRAMERATE=0.5
 #                       + [index:INDEX_BYTES]
 #                       + [size:INDEX_BYTES]
 
-HASH_ID_BYTES=6
+HASH_ID_BYTES=8
 
 INDEX_BYTES=3
 
@@ -208,14 +208,6 @@ decimal-to-binary () {
 }
 
 
-get-capcode () {
-    # -> capcode-string
-    # <- $1: version
-    # <- $2: correction level
-    echo -n "$(printf %02d $version)$level"
-}
-
-
 find-max-qr-encoding-byte () {
     # -- find maximum bytes that can be encoded with the given capcode
     # --
@@ -338,7 +330,7 @@ encode () {
     # <- $8: bcolor
 
     # get capcode or capaicty-code, meaning the amount of data can be stored.
-    capcode=$(get-capcode $version $level)
+    capcode="$(printf %02d $version)$level"
 
     # get maximum bytes that can be encoded with the given capcode
     bytes=$(find-max-qr-encoding-byte $capcode)
@@ -392,7 +384,8 @@ encode () {
 adjust-resize-ratio () {
     # -> auto-adjusted ratio
     # <- $1: version of QR code
-    echo "auto-adjusted"
+    local r=$(echo "scale=1;(-5/6)*$1+(350/6)/1" | bc)
+    echo -n "$(echo "scale=0;$r/1" | bc)%"
 }
 
 
@@ -419,7 +412,7 @@ decode-qrcode-image () {
                  "processing  ${header:0:$HASH_ID_BYTES}" \
                  "[${header:$HASH_ID_BYTES:$INDEX_BYTES} /" \
                  "${header:$((HEADER_BYTES-$INDEX_BYTES)):$INDEX_BYTES}]" \
-                 " <<  $1"
+                 " <<  $(pwd)/$(basename $1)"
     cat _ | tail -c +$((HEADER_BYTES + 1)) > "$2/$header"
     rm -f __ _
 }
@@ -516,7 +509,7 @@ print-help () {
       -m    set margin of QR Code            (recommended 4+, default: $QR_MARGIN)
       -1    set foreground color of QR Code  (6-hexadecimal, default: $QR_FOREGROUND)
       -0    set background color of QR Code  (6-hexadecimal, default: $QR_BACKGROUND)
-      -r    set resize-ratio if needed       (6-hexadecimal, default: $QR_RESIZE_RATIO)
+      -r    set resize-ratio if needed       (0-100%, default: $QR_RESIZE_RATIO)
       -V    set version of QR Code           (1 to 40, default: $QR_VERSION)
       -l    set error correction level       (one of [L,M,Q,H], default: $QR_ERROR_CORRECTION)
 HELP
@@ -528,7 +521,7 @@ HELP
 # --------------
 # qed main
 # --------------
-# process options
+# parsing arguments
 while getopts hdpqzvo:s:m:1:0:r:V:l: flag
 do
     case "${flag}" in
@@ -550,6 +543,7 @@ do
 done
 shift $((OPTIND - 1))
 
+
 # set fallbacks
 size=${size:-$QR_CELL_SIZE}
 margin=${margin:-$QR_MARGIN}
@@ -558,10 +552,12 @@ bcolor=${bcolor:-$QR_BACKGROUND}
 ratio=${ratio:-$QR_RESIZE_RATIO}
 version=${version:-$QR_VERSION}
 level=${level:-$QR_ERROR_CORRECTION}
+
 [[ $out == "-" ]] && out=
+[[ $ratio == "auto" ]] && ratio=$(adjust-resize-ratio $version)
 
 
-# decoding:
+# when decoding:
 if [[ -n $decode ]]; then
 
     # when used with stdin
@@ -601,7 +597,7 @@ if [[ -n $decode ]]; then
     decode "$out" "$in"
 
 
-# encoding:
+# when encoding:
 else
     # when used with stdin
     if [[ -p /dev/stdin || $# -eq 0 ]]; then
