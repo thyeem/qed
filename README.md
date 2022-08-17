@@ -1,12 +1,5 @@
 # qed
 
-<table><tr>
-<td><img src="data/qed.gif" width="460" /></td>
-<td><img src="data/sample.gif" width="480" /></td>
-</tr></table>
-
-<p></p>
-
 _Quod Erat Demonstrandum_. _Q.E.D._
 
 __Back up your data with QR codes anywhere and anyplace.__  (_warning: It's deadly inefficient, as you know._ `'-']b`)
