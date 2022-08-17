@@ -1,154 +1,140 @@
 # qed
 
+<img src="data/slideshow.gif" width="480" />
+
 _Quod Erat Demonstrandum_. _Q.E.D._
 
-__Back up your data with QR codes anywhere and anyplace.__  (_warning: It's deadly inefficient, as you know._ `'-']b`)
+__Encode data of any size into a bundle of QR code images.__
 
-This is heavily inspired by https://github.com/alisinabh/paperify.
+Seriously? Yes, we are. `'-']b`
 
-`qed` improved usability and added some features.
+As you know, It's deadly inefficient in terms of _storage_ and _encoding/decoding time_. Due to this inefficiency, it would not be great for simple backup purpose. However, we believe there will be useful uses.
 
-- `qed` creates some bytes of header when encoding so that it gives some information when decoded.
-- Once encoded by `qed`, it __can be restored at any moment__.
+## Quick Start
+```bash
+# if not provided '-o filepath' option, output to stdout is the default.
+# encode output: a tarball of QR images
+# decode output: a tarball of the original filepath (dir or file)
 
-  - Even if multiple kinds of backups are __mixed and duplicated within a single directory__...
-  - Even if the file names are not sorted... (_acutally, the file names have nothing to do with recovery_)
+# encode via stdin
+$ cat FILE | qed
 
+# encode via argument
+$ qed FILE
+
+# decode via stdin
+$ cat TAR_OF_QR_IMGs | qed -d
+
+# decode via argument
+$ qed -d (TAR_OF_QR_IMGs or DIR_OF_QR_IMGs)
+
+# redirection
+$ qed FILE -o OUT
+$ qed FILE > OUT
+
+$ qed -d -o OUT IN
+$ qed -d IN > OUT
+
+# -v increases verbosity. see the details how the work is progressing.
+$ qed -v FILE | qed -dv
+```
+For more detailed options, refer to the `Usage` section below.
+
+## Demo
+<img src="data/demo.gif" width="540" />
+
+
+## Features
+`qed` is heavily inspired by https://github.com/alisinabh/paperify. We have simpified to improve usability and added some features.
+
+- Fully support for setting [version](https://en.wikipedia.org/wiki/QR_code#Storage) and [error correction level](https://en.wikipedia.org/wiki/QR_code#Error_correction) of the QR code (used `byte-mode` only)
+
+- Uses `stdout` by default as encoder/decoder output.
+
+- Creates some bytes of header when encoding, and provides some information when decoding.
+
+- _deterministically decodes even when ambiguous or conflicting_
+  > __No matter of data duplication, filename corruption, file unsorting or filepath relocation__.
+  > (assumed that every header of files is not damaged)
+
+In short, once encoded any data by `qed`, it __can be restored by `qed` at any moment__.
 
 
 ## Install
-```sh
+```bash
 # prerequisites
 # ffmpeg is optional as only used with '-p' option.
-$ brew install zbar qrencode jq imagemagick ffmpeg
+$ brew install zbar qrencode imagemagick ffmpeg
 
 # clone
 $ git clone https://github.com/thyeem/qed.git
+$ cd qed
 
 # put the 'qed' file in $PATH direcoty like $HOME/.local/bin/ if needed
-$ cp qed $HOME/.local/bin
+$ chmod +x qed && cp $_ $HOME/.local/bin
 
-# test (optional)
 # check it out if you want to know it works well. This may take a while.
 $ sh test.sh
 ```
 
 ## Usage
-```plain
- qed - backup using QR encode/decode
+```bash
+$ qed -h
+ qed - encode data of any size into tarballs of QR Code
 
- . encode :: [FILE] -> DIR
+ Usage: qed [-hdpqzv] [-o output] [-s cell-size] [-m margin]
+            [-V version] [-l error-correction-level]
+            [-1 qr-fg-color] [-0 qr-bg-color] [-r resize-ratio ] filepath
 
-      qed -e [-o OUT-DIR] [-s CELL-SIZE] [-m MARGIN]
-             [-v VERSION] [-l ERROR-CORRECTION-LEVEL] [-t DATA-TYPE]
-             [-1 QR-COLOR-FG] [-0 QR-COLOR-BG] [-p] [-q] FILE ...
-
-
- . decode :: DIR -> [FILE]
-
-      qed -d [-r RESIZE-RATIO(%) ] [-o OUT-FILE] DIR
-
-
- options:
-      -p    Create and play QRcode slideshows after encoding is finished
-      -q    Open output QRcode images in browser after encoding is finished
-      -s    Set cell size of QRcode"         (default: 15)
-      -m    Set margin of QRcode             (recommended 4+, default: 8)
-      -1    Set foreground color of QRcode   (6-hexadecimal, default: 000000)
-      -0    Set background color of QRcode   (6-hexadecimal, default: ffffff)
-      -r    Set resize-ratio if needed       (6-hexadecimal, default: 25%)
-      -v    Set version of QRcode            (1 to 40, default: 38)
-      -l    Set QR error correction level    (one of [L,M,Q,H], default: L)
-      -t    Set type of input data           (one of [A,B,D,K,N], default: B)
-            A-Alphanumeric, B-Binary, D-Databits, K-Kanji, and N-Numeric
+      -h    print this message
+      -d    decode input
+      -p    create and play QR Code slideshows after encoding is finished
+      -q    open output QR Code images in browser after encoding is finished
+      -v    show in detail how the work is progressing
+      -o    set output filepath              (default: '-' for stdout)
+      -V    set version of QR Code           (1 to 40, default: 40)
+      -l    set error correction level       (one of [L,M,Q,H], default: L)
+      -s    set cell size of QR Code         (default: 16)
+      -m    set margin of QR Code            (recommended 4+, default: 16)
+      -1    set foreground color of QR Code  (6-hexadecimal, default: 000000)
+      -0    set background color of QR Code  (6-hexadecimal, default: ffffff)
+      -r    set resize-ratio if needed       (0-100%, default: auto)
 ```
 
 
-## Example
-```sh
-# say FILE is the file to encode
-# if no -o option, encode automatically into temp dir (notify after completion)
-$ qed -e FILE
+## More Examples
+```bash
+# get the encoded QR images
+$ cat FILE | qed | tar x
 
-# suppose that files to decode are in 'DIR'
-$ qed -d DIR
+# redirect output
+$ cat FILE | qed -o DESIRED_FILEPATH
 
-# no problem with encoding multiple files at once
-# all results go to the temp output dir
-$ qed -e FILE1 FILE2 FILE3 ...
+# the above is the same as
+$ cat FILE | qed | tar x -C DESIRED_FILEPATH
 
-# no problem in restoring the original files in the previous example.
-# say DIR-OF-MIXED-FILES is where files were mixed. (no worries duplicated data either)
-$ qed -d DIR-OF-MIXED-FILES
+# compress data after encoding
+$ cat FILE | qed | gzip -c > OUT
 
-# encode via <stdin>
-$ cat FILE | qed -e
+# open a video (QR code slideshows) when encoding is finished
+$ qed -p FILE
 
-# also decode supports <stdin>
-$ cat FILE | qed -e | qed -d
+# open QR code images on browser when encoding is finished
+$ qed -q FILE
 
-# what would be the result?
-# it's done a lot of work of encoding and decoding,
-# but the result is the same to the file at first, FILE.
-$ cat FILE | qed -e | qed -d | xargs cat | qed -e | qed -d | xargs qed -e | qed -d
+# identity transform
+$ cat FILE | qed | qed -d
+
+# the above is as follows
+$ qed FILE | qed -d
+
+# the same
+$ qed -o OUT FILE | xargs cat | qed -d
 
 # pretty sure that both are the same!
 # $(curl -s www.google.com) == $(cat /tmp/google)
-$ curl -s www.google.com | qed -e | qed -d | xargs cat > /tmp/google
-
-# open a video (QR code slideshows) when encoding is finished
-$ qed -e -p FILE        # or -ep
-
-# open QR code images on browser when encoding is finished
-$ qed -e -q FILE        # or -eq
-
-# set output directory to /tmp/tmp
-$ qed -e -o /tmp/tmp FILE
+$ curl -s www.google.com | qed | qed -d > /tmp/google
 
 # encode/decode with full of options
-$ qed -e -q -s 10 -m 16 -1 333333 -0 e0ffff -v 30 -l M -t K -o /tmp/tmp FILE | qed -d -r 33%
+$ qed -pq -s 16 -m 16 -1 333333 -0 e0ffff -v 30 -l M -o /tmp/tmp FILE | qed -d
 ```
-
-## Identity transform
-From the `qed` signatures of operation the below, we can easily guess `identity transform`.
-
-```
-encode :: [FILE] -> DIR
-
-decode :: DIR -> [FILE]
-
-I = decode . encode
-  = (DIR -> [FILE]) . ([FILE] -> DIR)
-  = [FILE] -> [FILE]
-  = id
-```
-
-In `SHELL` notation,
-
-
-- _i) when using `<stdin>`_ ⟹ `( | qed -e | qed -d )`
-
-  ```
-  I = decode . encode
-    = (qed -d) . (qed -e)
-    = | qed -e | qed -d
-
-  stream = I (stream)
-  stream | qed -e | qed -d  ⟹  stream
-
-  $ cat FILE | qed -e | qed -d  ⟹  (cat FILE)
-  ```
-
-
-- _ii) when using `args`_ ⟹ `( | xargs qed -e | qed -d )`
-
-  ```
-  I = decode . encode
-    = (qed -d) . (qed -e)
-    = | xargs qed -e | qed -d
-
-  args = I (args)
-  args | xargs qed -e | qed -d  ⟹  args
-
-  $ echo FILE1 FILE2 ... | xargs qed -e | qed -d  ⟹  "FILE1" "FILE2" ...
-  ```

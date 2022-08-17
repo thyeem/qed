@@ -18,7 +18,7 @@ QR_ERROR_CORRECTION=L
 QR_CELL_SIZE=16
 
 # default cell margin in QR Code area
-QR_MARGIN=16
+QR_MARGIN=32
 
 # default foreground-color of QR Code [6-hexadecimal]
 QR_FOREGROUND="000000"
@@ -294,7 +294,7 @@ create-video-and-play-slideshow () {
     local mp4="$1.mp4"
     local n=$(ls -1 *.png | wc -l)
     local t=$(echo "scale=0;1/$SLIDE_SHOW_FRAMERATE*$n+2" | bc)
-    stderr-msg 0 "generating $mp4"
+    stderr-msg 1 "generating $mp4"
 
     # converting encoded images into video file
     ffmpeg -y -hide_banner                   \
