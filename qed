@@ -15,7 +15,7 @@ QR_VERSION=40
 QR_ERROR_CORRECTION=L
 
 # default QR-cell size
-QR_CELL_SIZE=16
+QR_CELL_SIZE=12
 
 # default cell margin in QR Code area
 QR_MARGIN=32
@@ -26,8 +26,8 @@ QR_FOREGROUND="000000"
 # default background-color of QR Code [6-hexadecimal]
 QR_BACKGROUND="ffffff"
 
-# default image ratio to original when resizing
-QR_RESIZE_RATIO=auto
+# default maximum box-size when resizing QR Code image
+QR_RESIZE_BOX_SIZE=720
 
 # default framerate when playing slideshow
 SLIDE_SHOW_FRAMERATE=0.5
@@ -122,7 +122,11 @@ abspath () {
     # <- $1: filepath
     local dir=$(cd $(dirname $1); pwd -P)
     local fname=$(basename $1)
-    echo -n $dir/$fname;
+    if [[ "$fname" == "." ]]; then
+        echo -n "$dir"
+    else
+        echo -n "$dir/$fname"
+    fi
 }
 
 
@@ -169,23 +173,26 @@ tmp-filepath () {
 assert-dir () {
     # -> void
     # <- $1: filepath
-    are-you-sure $1 && rm -rf $1; mkdir -p $1
+    rm -rf $1; mkdir -p $1
 }
 
 
 assert-file () {
     # -> void
     # <- $1: filepath
-    are-you-sure $1 && rm -f $1; :> $1
+    rm -rf $1; :> $1
 }
 
 
 are-you-sure () {
     # -> exit status
     # <- $1: filepath
+    [[ "$(abspath $1)" == "$(abspath $(pwd))" ]] \
+        && error "cannot set it to the current directory: $(abspath $1)" \
+                 "\n\t choose another directory."
     if [ -e "$1" ]; then
         >&2 echo
-        read -n 1 -rp "Are you sure to delete $1? [y/N] " < /dev/tty
+        read -n 1 -rp "$2 [y/N] " < /dev/tty
         >&2 echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             return 0
@@ -308,7 +315,7 @@ create-video-and-play-slideshow () {
            -s hd720                          \
            $mp4                              \
         || error "occurred problem while creating the slideshow: $mp4"
-    stderr-msg 0 "opening $mp4"
+    stderr-msg 1 "opening $mp4"
     open $mp4
 }
 
@@ -321,10 +328,10 @@ quick-view-on-browser () {
     echo -e "<head><title>qed-encoded</title></head>" >> $html
     echo -e "<body><center>" >> $html
     for f in $(ls -1 | sort); do
-        echo -e "<p><img src=\"$(abspath $f)\" width="1000"></p>" >> $html
+        echo -e "<img src=\"$(abspath $f)\" width="720">" >> $html
     done
     echo -e "</center></body><html>" >> $html
-    stderr-msg 0 "opening $html"
+    stderr-msg 1 "opening $html"
     open $html
 }
 
@@ -395,14 +402,7 @@ encode () {
         ls -1 *.png | tar -c -T - \
             || error "occurred problem while writing to stdout"
     fi
-}
-
-
-adjust-resize-ratio () {
-    # -> auto-adjusted ratio
-    # <- $1: version of QR code
-    local r=$(echo "scale=1;(-5/6)*$1+(350/6)/1" | bc)
-    echo -n "$(echo "scale=0;$r/1" | bc)%"
+    [[ -z $view && -z $slideshow ]] && rm -rf $t
 }
 
 
@@ -410,15 +410,15 @@ decode-qrcode-image () {
     # -> void
     # <- $1: qrcode image file
     # <- $2: dirname where decoded files are collected
-    # <- $3: resize ratio to original
+    # <- $3: max-box-size of QR code image
     rm -f _ __
 
     # resize
-    convert -resize "${3}%" $1 __ \
+    convert -resize "${3}x${3}>" $1 __ \
         || error "occurred problem during resizing QR Code image: $1"
 
     # decode each iamge using zbar
-    zbarimg --raw --quiet -Sbinary __ > _ \
+    zbarimg --raw --quiet -Sbinary  __ > _ \
         || error "occurred problem during decoding QR Code image: $1"
 
     # parse header
@@ -483,7 +483,7 @@ decode () {
                       | grep "image/*"         \
                       | awk -F: '{print$1}'    \
                       | sort); do
-        decode-qrcode-image $f $decoded $ratio \
+        decode-qrcode-image $f $decoded $QR_RESIZE_BOX_SIZE \
             || error "failed to decode QR code image: $f"
     done
 
@@ -514,6 +514,7 @@ decode () {
     else
         find . -type f | sort | xargs cat
     fi
+    rm -rf $decoded $merged
 }
 
 
@@ -522,9 +523,8 @@ print-help () {
     cat << HELP
  qed - encode data of any size into tarballs of QR Code
 
- Usage: $this [-hdpqzv] [-o output] [-s cell-size] [-m margin]
-            [-V version] [-l error-correction-level]
-            [-1 qr-fg-color] [-0 qr-bg-color] [-r resize-ratio ] filepath
+ Usage: $this [-hdpqzv] [-o output] [-V version] [-l error-correction-level]
+            [-s cell-size] [-m margin] [-1 qr-fg-color] [-0 qr-bg-color] filepath
 
       -h    print this message
       -d    decode input
@@ -532,13 +532,12 @@ print-help () {
       -q    open output QR Code images in browser after encoding is finished
       -v    show in detail how the work is progressing
       -o    set output filepath              (default: '-' for stdout)
-      -V    set version of QR Code           (1 to 40, default: $QR_VERSION)
-      -l    set error correction level       (one of [L,M,Q,H], default: $QR_ERROR_CORRECTION)
       -s    set cell size of QR Code         (default: $QR_CELL_SIZE)
-      -m    set margin of QR Code            (recommended 4+, default: $QR_MARGIN)
-      -1    set foreground color of QR Code  (6-hexadecimal, default: $QR_FOREGROUND)
-      -0    set background color of QR Code  (6-hexadecimal, default: $QR_BACKGROUND)
-      -r    set resize-ratio if needed       (0-100%, default: $QR_RESIZE_RATIO)
+      -m    set margin of QR Code            (recommended 4+,   default: $QR_MARGIN)
+      -V    set version of QR Code           (1 to 40,          default: $QR_VERSION)
+      -l    set error correction level       (one of [L,M,Q,H], default: $QR_ERROR_CORRECTION)
+      -1    set foreground color of QR Code  (6-hexadecimal,    default: $QR_FOREGROUND)
+      -0    set background color of QR Code  (6-hexadecimal,    default: $QR_BACKGROUND)
 HELP
     exit 0
 }
@@ -562,7 +561,6 @@ do
         m) margin=${OPTARG};;
         1) fcolor=${OPTARG};;
         0) bcolor=${OPTARG};;
-        r) ratio=${OPTARG};;
         V) version=${OPTARG};;
         l) level=${OPTARG};;
     esac
@@ -575,21 +573,18 @@ size=${size:-$QR_CELL_SIZE}
 margin=${margin:-$QR_MARGIN}
 fcolor=${fcolor:-$QR_FOREGROUND}
 bcolor=${bcolor:-$QR_BACKGROUND}
-ratio=${ratio:-$QR_RESIZE_RATIO}
 version=${version:-$QR_VERSION}
 level=${level:-$QR_ERROR_CORRECTION}
-
 [[ "$out" == "-" ]] && out=
-[[ "$ratio" == "auto" ]] && ratio=$(adjust-resize-ratio $version)
 
 
 # when decoding:
 if [[ -n $decode ]]; then
+    in="$(tmp-filepath)"
+    assert-dir "$in"
 
     # when used with stdin
     if [[ -p /dev/stdin || $# -eq 0 ]]; then
-        in="$(tmp-filepath)"
-        assert-dir "$in"
         cat - | tar -x -C "$in" &>/dev/null \
             || error "entered an unacceptable format: must be a tarball or dir"
 
@@ -598,12 +593,10 @@ if [[ -n $decode ]]; then
         f="$1"
         [[ -e "$f" ]] || error "filepath not found: $f"
         if [ -d "$f" ]; then
-            in=$f
+            cp -a "$(abspath $f)/" $in
         else
             tar -tf $f &>/dev/null \
                 || error "the target to be decoded must be a tarball or dir: $f"
-            in="$(tmp-filepath)"
-            assert-dir "$in"
             tar -xf $f -C "$in"
         fi
     fi
@@ -618,9 +611,10 @@ if [[ -n $decode ]]; then
     # prepare output name (if any). stdout by default
     if [ -n "$out" ]; then
         out=$(abspath $out)
-        are-you-sure $out && rm -rf $out
+        are-you-sure "$out" "Are you sure to delete $out?" && rm -rf $out
     fi
     decode "$out" "$in"
+    rm -rf $in
 
 
 # when encoding:
@@ -639,12 +633,12 @@ else
     # prepare output name (if any). stdout by default
     if [ -n "$out" ]; then
         out=$(abspath $out)
-        are-you-sure $out && rm -rf $out
+        are-you-sure "$out" "Are you sure to delete $out?" && rm -rf $out
     fi
 
     # prepare input file to encode
-    in="$(tmp-filepath).tar.gz"
-    cd $(dirname $f) && tar -c $(basename $f) | gzip -c3 > $in \
+    in="$(tmp-filepath)"
+    cd $(dirname $f) && tar -c $(basename $f) | gzip -c1 > $in \
         || error "occurred problem while archiving file: $f"
 
     encode "$out"      \
@@ -655,6 +649,7 @@ else
            "$level"    \
            "$fcolor"   \
            "$bcolor"
+    rm -f $in
 fi
 
 exit 0

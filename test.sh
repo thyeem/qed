@@ -64,8 +64,7 @@ when_encode_decode_with_data_passed_via_stdin () {
     local f=
     for i in $(seq 0 5); do
         f=${files[i]}
-        t "$FUNCNAME" $f \
-        "cat $f | $QED | $QED -d >/dev/null"
+        t "$FUNCNAME" $f "cat $f | $QED | $QED -d >/dev/null"
     done
 }
 
@@ -74,22 +73,19 @@ when_encode_decode_with_data_passed_via_args () {
     local f=
     for i in $(seq 0 5); do
         f=${files[i]}
-        t "$FUNCNAME" $f \
-        "$QED $f | $QED -d >/dev/null"
+        t "$FUNCNAME" $f "$QED $f | $QED -d >/dev/null"
     done
 }
 
 when_provided_with_option_images_in_browser () {
     local f=${files[5]}
-    t "$FUNCNAME" $f \
-    "$QED -q $f | $QED -d >/dev/null"
+    t "$FUNCNAME" $f "$QED -q $f | $QED -d >/dev/null"
 }
 
 
 when_provided_with_option_play_slideshows () {
     local f=${files[5]}
-    t "$FUNCNAME" $f \
-    "$QED -p $f | $QED -d >/dev/null"
+    t "$FUNCNAME" $f "$QED -p $f | $QED -d >/dev/null"
 }
 
 
@@ -123,8 +119,8 @@ when_encoded_files_are_renamed_mixed_duplicated () {
     done
 
     # try to decode. let's go back to before!
-    t "$FUNCNAME" "dir-corruption-test" \
-    "$QED -d $o >/dev/null"
+    t "$FUNCNAME" "dir-corruption-test" "$QED -d $o >/dev/null"
+    rm -rf o
 }
 
 
@@ -134,7 +130,7 @@ when_encode_decode_with_full_combination_of_capcodes () {
     for v in $(seq 3 40); do
         for l in ${level[@]}; do
             t "$FUNCNAME" "$f:$l-$v-binary" \
-            "$QED -V $v -l $l $f | $QED -d >/dev/null"
+              "$QED -V $v -l $l $f | $QED -d >/dev/null"
         done
     done
 
@@ -143,8 +139,7 @@ when_encode_decode_with_full_combination_of_capcodes () {
 
 when_encode_decode_with_full_list_of_files () {
     for f in ${files[@]}; do
-        t "$FUNCNAME" $f \
-        "$QED $f | $QED -d >/dev/null "
+        t "$FUNCNAME" $f "$QED $f | $QED -d >/dev/null"
     done
 }
 
