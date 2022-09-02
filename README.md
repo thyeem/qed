@@ -17,7 +17,9 @@ If not provided `-o filepath` option, __output to `stdout` is the default__.
 
 - decoding output: content of the original file path &ensp;⟹&ensp; `stdout`
 
-    > If there are multiple files in the original file path, there will be sorted by file hash.
+    > If there are multiple files in the original file path (e.g., directory), output `stdout` will be sorted by file hash.
+    >
+    > If the -o option is provided, the files are extracted to the specified output directory.
 
 #### Encoding
 ```bash

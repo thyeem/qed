@@ -187,9 +187,6 @@ assert-file () {
 are-you-sure () {
     # -> exit status
     # <- $1: filepath
-    [[ "$(abspath $1)" == "$(abspath $(pwd))" ]] \
-        && error "cannot set it to the current directory: $(abspath $1)" \
-                 "\n\t choose another directory."
     if [ -e "$1" ]; then
         >&2 echo
         read -n 1 -rp "$2 [y/N] " < /dev/tty
@@ -357,7 +354,7 @@ encode () {
     bytes=$(find-max-qr-encoding-byte $capcode)
 
     # guard on 'bytes' variable
-    [[ -z $bytes ]] && \
+    [[ -n $bytes ]] || \
         error "failed to get QR-max-encoding-byte." \
               "\n\t check if the values of -l, -t, and -V are set correctly."
 
@@ -611,6 +608,9 @@ if [[ -n $decode ]]; then
     # prepare output name (if any). stdout by default
     if [ -n "$out" ]; then
         out=$(abspath $out)
+        [[ "$(abspath $out)" != "$(abspath $(pwd))" ]] \
+            || error "do not write to the current directory: $(abspath $out)" \
+                    "\n\t choose another directory."
         are-you-sure "$out" "Are you sure to delete $out?" && rm -rf $out
     fi
     decode "$out" "$in"
