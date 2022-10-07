@@ -15,10 +15,10 @@ QR_VERSION=40
 QR_ERROR_CORRECTION=L
 
 # default QR-cell size
-QR_CELL_SIZE=12
+QR_CELL_SIZE=13
 
 # default cell margin in QR Code area
-QR_MARGIN=32
+QR_MARGIN=24
 
 # default foreground-color of QR Code [6-hexadecimal]
 QR_FOREGROUND="000000"
