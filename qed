@@ -30,7 +30,7 @@ QR_BACKGROUND="ffffff"
 QR_RESIZE_BOX_SIZE=720
 
 # default framerate when playing slideshow
-SLIDE_SHOW_FRAMERATE=0.5
+SLIDE_SHOW_FRAMERATE=1
 
 
 # Header Definition ---------------------------------------------------
@@ -390,6 +390,9 @@ encode () {
     # play slideshow after generating video from images (if -p is set)
     [[ -n $slideshow ]] && create-video-and-play-slideshow "$t-$capcode"
 
+    # if quick-view or slideshow then exit
+    [[ -n $view || -n $slideshow ]] && exit 0
+
     # output: write to file or to stdout in tar format
     if [ -n "$1" ]; then
         ls -1 *.png | tar -cf "$1" -T - \
@@ -399,7 +402,7 @@ encode () {
         ls -1 *.png | tar -c -T - \
             || error "occurred problem while writing to stdout"
     fi
-    [[ -z $view && -z $slideshow ]] && rm -rf $t
+    rm -rf $t
 }
 
 
