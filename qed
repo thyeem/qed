@@ -91,7 +91,7 @@ warning () {
     # -> exit status
     # <- $@: all messages passed
     stderr-msg 1 $(magenta warning) "\t" $@
-    return 0
+    return 1
 }
 
 
@@ -418,8 +418,9 @@ decode-qrcode-image () {
         || error "occurred problem during resizing QR Code image: $1"
 
     # decode each iamge using zbar
-    zbarimg --raw --quiet -Sbinary  __ > _ \
-        || error "occurred problem during decoding QR Code image: $1"
+    zbarimg --raw --quiet -Sbinary __ > _ \
+        || warning "occurred problem during decoding QR Code image: $1" \
+        || return 0
 
     # parse header
     local header=$(cat _ | head -c $HEADER_BYTES)
