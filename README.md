@@ -4,18 +4,18 @@
 
 _Quod Erat Demonstrandum_. _Q.E.D._
 
-__Encode data of any size into a bundle of QR code images.__
+__Encode data of any size into a tarball of QR code images.__
 
 Seriously? Yes, we are. `'-']b`
 
-As you know, this is deadly inefficient in terms of _storage_ and _encoding/decoding time_. Due to this inefficiency, it would not be great for simple backup purpose. However, we believe there will be useful uses.
+As you know, this is deadly inefficient in terms of _storage_ and _encoding/decoding time_. Due to this inefficiency, it would not be great for simple backup purpose. However, we believe it may have useful uses.
 
 ## Quick Start
 If not provided `-o filepath` option, __output to `stdout` is the default__.
 
-- encoding output: a tarball of QR images &ensp;⟹&ensp; `stdout`
+- encoding output: a `tarball` of QR images &ensp;⟹&ensp; `stdout`
 
-- decoding output: content of the original file path &ensp;⟹&ensp; `stdout`
+- decoding output: contents of `filepath` &ensp;⟹&ensp; `stdout`
 
     > If there are multiple files in the original file path (e.g., directory), output `stdout` will be sorted by file hash.
     >
@@ -40,6 +40,12 @@ $ qed FILE > encoded.tar
 
 # the same as above
 $ qed FILE -o encoded.tar
+
+# create a video (as a QR code slideshow) when encoding is finished
+$ qed -p FILE
+
+# create a HTML of QR code images on browser when encoding is finished
+$ qed -q
 ```
 
 #### Decoding
@@ -47,10 +53,17 @@ $ qed FILE -o encoded.tar
 # decode via stdin (a tarball of QR images)
 $ cat qr_images.tar | qed -d
 
-# decode via argument (either a tarball or dir of QR images)
+# decode via argument of a tarball
 $ qed -d qr_images.tar
 
+# decode via argument of a directory of QR code images
 $ qed -d qr_images/
+
+# decode via argument of a single file of QR code
+$ qed -d qr_image.png
+
+# decode via argument of a video (any files encoded via `qed -p`)
+$ qed -d qr_video.mp4
 
 # get decoded original files into the specified file path, "decoded"
 $ qed -d encoded.tar > decoded
@@ -101,7 +114,7 @@ $ sh test.sh
 ```
 
 ## Usage
-```plain
+```qed
 $ qed -h
  qed - encode data of any size into tarballs of QR Code
 
@@ -110,16 +123,16 @@ $ qed -h
 
       -h    print this message
       -d    decode input
-      -p    create and play QR Code slideshows after encoding is finished
-      -q    open output QR Code images in browser after encoding is finished
+      -p    create QR Code slideshows (mp4) after encoding is finished
+      -q    create QR Code quick-view (HTML document) after encoding is finished
       -v    show in detail how the work is progressing
       -o    set output filepath              (default: '-' for stdout)
-      -s    set cell size of QR Code         (default: 12)
-      -m    set margin of QR Code            (recommended 4+,   default: 32)
-      -V    set version of QR Code           (1 to 40,          default: 40)
-      -l    set error correction level       (one of [L,M,Q,H], default: L)
-      -1    set foreground color of QR Code  (6-hexadecimal,    default: 000000)
-      -0    set background color of QR Code  (6-hexadecimal,    default: ffffff)
+      -s    set cell size of QR Code         (default: $QR_CELL_SIZE)
+      -m    set margin of QR Code            (recommended 4+,   default: $QR_MARGIN)
+      -V    set version of QR Code           (1 to 40,          default: $QR_VERSION)
+      -l    set error correction level       (one of [L,M,Q,H], default: $QR_ERROR_CORRECTION)
+      -1    set foreground color of QR Code  (6-hexadecimal,    default: $QR_FOREGROUND)
+      -0    set background color of QR Code  (6-hexadecimal,    default: $QR_BACKGROUND)
 ```
 
 
@@ -136,11 +149,11 @@ $ cat FILE | qed | gzip -c > outfile.tar.gz
 # uncompress the tar.gz archive then decode. go back to FILE again (stdout)
 $ gunzip -c outfile.tar.gz | qed -d
 
-# open a mp4 video (QR code slideshow) when encoding is finished
-$ qed -p FILE
+# create and play a mp4 video (QR code slideshow) when encoding is finished
+$ qed -p FILE | xargs open
 
-# open QR code images on browser when encoding is finished
-$ qed -q FILE
+# create and open QR code images on browser when encoding is finished
+$ qed -q FILE | xargs open
 
 # if you want both
 $ qed -pq FILE

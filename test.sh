@@ -79,13 +79,13 @@ when_encode_decode_with_data_passed_via_args () {
 
 when_provided_with_option_images_in_browser () {
     local f=${files[5]}
-    t "$FUNCNAME" $f "$QED -q $f >/dev/null"
+    t "$FUNCNAME" $f "$QED -q $f | xargs open"
 }
 
 
 when_provided_with_option_play_slideshows () {
     local f=${files[5]}
-    t "$FUNCNAME" $f "$QED -p $f >/dev/null"
+    t "$FUNCNAME" $f "$QED -p $f | xargs open"
 }
 
 

@@ -79,14 +79,6 @@ error () {
 }
 
 
-ok () {
-    # -> exit status
-    # <- $1: ok message
-    stderr-msg 1 -n $(green ok) "\t"
-    echo $1
-}
-
-
 warning () {
     # -> exit status
     # <- $@: all messages passed
@@ -112,7 +104,7 @@ green () {
 magenta () {
 
     # -> ansi-escaped text
-    # <- $1: text to colorize green
+    # <- $1: text to colorize magenta
     echo -e "\033[0;35m$1\033[0m"
 }
 
@@ -148,7 +140,7 @@ hash-id () {
     # -- get a hash value using a given hasher
     #
     # -> sized hex-string
-    # <- $1: filename - if not provided, use stdin
+    # <- $1: filepath - if not provided, use stdin
     if [ $# -gt 0 ]; then
         # when used with args: hash-id STRING
         echo -n $($HASHER "$1" | head -c $HASH_ID_BYTES)
@@ -199,6 +191,17 @@ are-you-sure () {
     else
         return 0
     fi
+}
+
+
+ask-for-deletion () {
+    # -> filepath | exit status
+    # <- $1: filepath
+    local o=$(abspath $1)
+    are-you-sure "$o" "Attempting to overwrite an existing $o. Are you sure?"  \
+        && are-you-sure "$o" "Irrevisible action. Are you sure to delete $o?"  \
+        && rm -rf $o
+    echo $o
 }
 
 
@@ -277,14 +280,14 @@ write-header-and-qrencode () {
             || error "occurred problem while writing header: $header"
 
         # encode each split file into QR Code
-        cat "_/$f" | qrencode -8               \
-                              -s $3            \
-                              -m $4            \
-                              -v $5            \
-                              -l $6            \
-                              -o $o            \
-                              --foreground=$7  \
-                              --background=$8  \
+        cat "_/$f" | $(which qrencode) -8               \
+                                       -s $3            \
+                                       -m $4            \
+                                       -v $5            \
+                                       -l $6            \
+                                       -o $o            \
+                                       --foreground=$7  \
+                                       --background=$8  \
             || error "occurred problem while encoding data into QR Code: $(pwd)/$f"
         it=$((it+1))
     done
@@ -292,7 +295,28 @@ write-header-and-qrencode () {
 }
 
 
-create-video-and-play-slideshow () {
+get-images-from-dir () {
+    # -> filepath of images
+    # <- $1: directory
+    find $1 | file --mime -f -     \
+            | grep "image/*"       \
+            | awk -F: '{print$1}'  \
+            | grep -v -w __        \
+            | grep -v -w _         \
+            | sort
+}
+
+
+check-if-video () {
+    # -> result string
+    # <- $1: filepath
+    file --mime $1       \
+        | grep "video/*" \
+        | awk -F: '{print$1}'
+}
+
+
+create-video () {
     # -> void
     # <- $1: video-file-basename
     local mp4="$1.mp4"
@@ -301,23 +325,22 @@ create-video-and-play-slideshow () {
     stderr-msg 1 "generating $mp4"
 
     # converting encoded images into video file
-    ffmpeg -y -hide_banner                   \
-           -loglevel error                   \
-           -stats                            \
-           -loop 1                           \
-           -framerate $SLIDE_SHOW_FRAMERATE  \
-           -t $t                             \
-           -pattern_type glob                \
-           -i '*.png'                        \
-           -s hd720                          \
-           $mp4                              \
+    $(which ffmpeg) -y -hide_banner                   \
+                    -loglevel error                   \
+                    -stats                            \
+                    -loop 1                           \
+                    -framerate $SLIDE_SHOW_FRAMERATE  \
+                    -t $t                             \
+                    -pattern_type glob                \
+                    -i '*.png'                        \
+                    -s hd720                          \
+                    $mp4                              \
         || error "occurred problem while creating the slideshow: $mp4"
-    stderr-msg 1 "opening $mp4"
-    open $mp4
+    echo $mp4
 }
 
 
-quick-view-on-browser () {
+create-quick-view () {
     # -> void
     # <- $1: html-file-basename
     local html="$1.html"
@@ -328,8 +351,7 @@ quick-view-on-browser () {
         echo -e "<img src=\"$(abspath $f)\" width="720">" >> $html
     done
     echo -e "</center></body><html>" >> $html
-    stderr-msg 1 "opening $html"
-    open $html
+    echo $html
 }
 
 
@@ -337,7 +359,7 @@ encode () {
     # -- the outermost encoding wrapper function
     # -- single encoding process is performed for a given file
     #
-    # -> void
+    # -> tar-stream | filepath
     # <- $1: out
     # <- $2: in
     # <- $3: size
@@ -348,18 +370,18 @@ encode () {
     # <- $8: bcolor
 
     # get capcode or capaicty-code, meaning the amount of data can be stored.
-    capcode="$(printf %02d $version)$level"
+    local capcode="$(printf %02d $version)$level"
 
     # get maximum bytes that can be encoded with the given capcode
-    bytes=$(find-max-qr-encoding-byte $capcode)
+    local bytes=$(find-max-qr-encoding-byte $capcode)
 
     # guard on 'bytes' variable
     [[ -n $bytes ]] || \
         error "failed to get QR-max-encoding-byte." \
-              "\n\t check if the values of -l, -t, and -V are set correctly."
+              "\n\t check if the values of -l and -V are set correctly."
 
     # tmp working directory
-    t=$(tmp-filepath)
+    local t=$(tmp-filepath)
     assert-dir "$t/_"
     cd $t
 
@@ -384,11 +406,11 @@ encode () {
     stderr-msg 0 "completed.  each QR Code encoded in:" \
                  "$bytes bytes (including ${HEADER_BYTES}-byte header)\n"
 
-    # quick-view encoded images on browser (if -q is set)
-    [[ -n $view ]] && quick-view-on-browser "$t-$capcode"
+    # quick-view encoded images (if -q is set)
+    [[ -n $view ]] && create-quick-view "$t-$capcode"
 
     # play slideshow after generating video from images (if -p is set)
-    [[ -n $slideshow ]] && create-video-and-play-slideshow "$t-$capcode"
+    [[ -n $slideshow ]] && create-video "$t-$capcode"
 
     # if quick-view or slideshow then exit
     [[ -n $view || -n $slideshow ]] && exit 0
@@ -396,7 +418,7 @@ encode () {
     # output: write to file or to stdout in tar format
     if [ -n "$1" ]; then
         ls -1 *.png | tar -cf "$1" -T - \
-            && ok "$1" \
+            && echo "$1" \
             || error "occurred problem while writing to file: $1"
     else
         ls -1 *.png | tar -c -T - \
@@ -406,6 +428,16 @@ encode () {
 }
 
 
+video-to-images () {
+    # -> filepath of the converted images
+    # <- $1: video file
+    local t=$(tmp-filepath)
+    mkdir -p $t
+    $(which ffmpeg) -i "$1" -r ${SLIDE_SHOW_FRAMERATE} $t/%4d.png \
+        || error "occurred problem while converting the video: $1"
+    echo $t
+}
+
 decode-qrcode-image () {
     # -> void
     # <- $1: qrcode image file
@@ -414,11 +446,11 @@ decode-qrcode-image () {
     rm -f _ __
 
     # resize
-    convert -resize "${3}x${3}>" $1 __ \
+    $(which convert) -resize "${3}x${3}>" $1 __ \
         || error "occurred problem during resizing QR Code image: $1"
 
     # decode each iamge using zbar
-    zbarimg --raw --quiet -Sbinary __ > _ \
+    $(which zbarimg) --raw --quiet -Sbinary __ > _ \
         || warning "occurred problem during decoding QR Code image: $1" \
         || return 0
 
@@ -439,7 +471,8 @@ decode-qrcode-image () {
 
 find-hashes-of-uniq-files () {
     # -> many hash strings (blank separated)
-    # no input, but this function depends on the directory location.
+    # no input.
+    # the ouput depends on the directory where this function is called.
     local awk=`echo {print substr\(\\$0,3,$HASH_ID_BYTES\)}`
     echo -n $(find . -size +0c | awk "$awk" | sort | uniq)
 }
@@ -456,7 +489,7 @@ merge-and-verify-decoded-files () {
     # check if the merged file is valid
     local got=$(cat $f | hash-id)
     if [ "$2" != "$got" ]; then
-        tar -tf $f &> /dev/null \
+        tar -tf $f &>/dev/null \
             || error "not matched hash value of file: $f" \
                      "\n\t expected $2, but got $got"
 
@@ -469,21 +502,19 @@ merge-and-verify-decoded-files () {
 
 decode () {
     # -- the outermost decoding wrapper function
-    #files
-    # <- $1: out: output tarball filename
-    # <- $2: dir containing files to be decoded
+    # -> file-stream | filepath
+    # <- $1: out: output tarball filepath
+    # <- $2: directory containing images to be decoded
+
     stderr-msg 0 -n "."
-    cd $2
+    cd "$2"
 
     # where decoded files are collected
     local decoded="$(tmp-filepath)"
     assert-dir "$decoded"
 
     # decoding from images
-    for f in $(find . | file --mime -f -       \
-                      | grep "image/*"         \
-                      | awk -F: '{print$1}'    \
-                      | sort); do
+    for f in $(get-images-from-dir .); do
         decode-qrcode-image $f $decoded $QR_RESIZE_BOX_SIZE \
             || error "failed to decode QR code image: $f"
     done
@@ -511,7 +542,7 @@ decode () {
     stderr-msg 0
     if [ -n "$1" ]; then
         mv -f $merged "$1"
-        ok "$1"
+        echo "$1"
     else
         find . -type f | sort | xargs cat
     fi
@@ -529,8 +560,8 @@ print-help () {
 
       -h    print this message
       -d    decode input
-      -p    create and play QR Code slideshows after encoding is finished
-      -q    open output QR Code images in browser after encoding is finished
+      -p    create QR Code slideshows (mp4) after encoding is finished
+      -q    create QR Code quick-view (HTML document) after encoding is finished
       -v    show in detail how the work is progressing
       -o    set output filepath              (default: '-' for stdout)
       -s    set cell size of QR Code         (default: $QR_CELL_SIZE)
@@ -584,41 +615,38 @@ if [[ -n $decode ]]; then
     in="$(tmp-filepath)"
     assert-dir "$in"
 
-    # when used with stdin
-    if [[ -p /dev/stdin || $# -eq 0 ]]; then
+    # prepare input
+    if [[ -p /dev/stdin || $# -eq 0 ]]; then    # input from stdin
         cat - | tar -x -C "$in" &>/dev/null \
-            || error "entered an unacceptable format: must be a tarball or dir"
+            || error "given an unacceptable input: must be a tar-stream"
 
-    # when used with arguments
-    else
-        f="$1"
+    else    # input from arguments
+        f=$(abspath $1)
         [[ -e "$f" ]] || error "filepath not found: $f"
-        if [ -d "$f" ]; then
-            cp -a "$(abspath $f)/" $in
-        else
-            tar -tf $f &>/dev/null \
-                || error "the target to be decoded must be a tarball or dir: $f"
-            tar -xf $f -C "$in"
+        if [ -d "$f" ]; then    # arg: directory
+            get-images-from-dir "$f" | xargs -I{} cp -f "{}" $in
+        else    # arg: file (tarball | image | video)
+            if [[ $(check-if-video $f) ]]; then
+                in=$(video-to-images $f) \
+                    || error "failed to convert QR slideshow video: $f"
+            else
+                tar -tf $f &>/dev/null     \
+                    && tar -xf $f -C "$in" \
+                    || cp -f "$f" $in
+            fi
         fi
     fi
 
     # check if there's anything to decode
-    [[ $(find $in | file --mime -f -     \
-                  | grep "image/*"       \
-                  | awk -F: '{print$1}'  \
-                  | wc -l) -gt 0 ]]      \
-        || error "nothing to decode: $1"
+    [[ $(get-images-from-dir $in | wc -l) -gt 0 ]] \
+        || error "nothing to decode: $1" \
+                 "\n\t must be a tarball or filepath containing images"
+
 
     # prepare output name (if any). stdout by default
-    if [ -n "$out" ]; then
-        out=$(abspath $out)
-        [[ "$(abspath $out)" != "$(abspath $(pwd))" ]] \
-            || error "do not write to the current directory: $(abspath $out)" \
-                    "\n\t choose another directory."
-        are-you-sure "$out" "Are you sure to delete $out?" && rm -rf $out
-    fi
+    [[ -n "$out" ]] && out=$(ask-for-deletion $out)
+
     decode "$out" "$in"
-    rm -rf $in
 
 
 # when encoding:
@@ -635,10 +663,7 @@ else
     fi
 
     # prepare output name (if any). stdout by default
-    if [ -n "$out" ]; then
-        out=$(abspath $out)
-        are-you-sure "$out" "Are you sure to delete $out?" && rm -rf $out
-    fi
+    [[ -n "$out" ]] && out=$(ask-for-deletion $out)
 
     # prepare input file to encode
     in="$(tmp-filepath)"
