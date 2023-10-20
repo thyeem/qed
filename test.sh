@@ -125,12 +125,13 @@ when_encoded_files_are_renamed_mixed_duplicated () {
 
 
 when_encode_decode_with_full_combination_of_capcodes () {
-    local f=${files[2]}
+    local f=${files[1]}
     local level=("L" "M" "Q" "H")
     for v in $(seq 3 40); do
         for l in ${level[@]}; do
             t "$FUNCNAME" "$f:$l-$v-binary" \
               "$QED -V $v -l $l $f | $QED -d >/dev/null"
+            sleep 1
         done
     done
 
@@ -140,6 +141,7 @@ when_encode_decode_with_full_combination_of_capcodes () {
 when_encode_decode_with_full_list_of_files () {
     for f in ${files[@]}; do
         t "$FUNCNAME" $f "$QED $f | $QED -d >/dev/null"
+        sleep 1
     done
 }
 
@@ -152,8 +154,8 @@ when_provided_with_option_images_in_browser
 
 when_provided_with_option_play_slideshows
 
-when_encoded_files_are_renamed_mixed_duplicated
-
 when_encode_decode_with_full_combination_of_capcodes
+
+when_encoded_files_are_renamed_mixed_duplicated
 
 when_encode_decode_with_full_list_of_files

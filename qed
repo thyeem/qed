@@ -321,20 +321,21 @@ create-video () {
     # <- $1: video-file-basename
     local mp4="$1.mp4"
     local n=$(ls -1 *.png | wc -l)
-    local t=$(echo "scale=0;1/$SLIDE_SHOW_FRAMERATE*$n+2" | bc)
-    stderr-msg 1 "generating $mp4"
+    local t=$(echo "scale=0;$n/$framerate+3" | bc)
+    local stats=
+    [[ -n $verbose ]] && stats="-stats"
 
     # converting encoded images into video file
-    $(which ffmpeg) -y -hide_banner                   \
-                    -loglevel error                   \
-                    -stats                            \
-                    -loop 1                           \
-                    -framerate $SLIDE_SHOW_FRAMERATE  \
-                    -t $t                             \
-                    -pattern_type glob                \
-                    -i '*.png'                        \
-                    -s hd720                          \
-                    $mp4                              \
+    $(which ffmpeg) -y -hide_banner     \
+                    -loglevel error     \
+                    -stream_loop -1     \
+                    -r $framerate       \
+                    -t $t               \
+                    -pattern_type glob  \
+                    -i '*.png'          \
+                    -s hd720            \
+                    $stats              \
+                    $mp4                \
         || error "occurred problem while creating the slideshow: $mp4"
     echo $mp4
 }
@@ -432,8 +433,15 @@ video-to-images () {
     # -> filepath of the converted images
     # <- $1: video file
     local t=$(tmp-filepath)
+    local stats=
     mkdir -p $t
-    $(which ffmpeg) -i "$1" -r ${SLIDE_SHOW_FRAMERATE} $t/%4d.png \
+    [[ -n $verbose ]] && stats="-stats"
+    $(which ffmpeg) -y -hide_banner       \
+                    -loglevel error       \
+                    -i "$1"               \
+                    -vf "fps=$framerate"  \
+                    $stats                \
+                    $t/%4d.png            \
         || error "occurred problem while converting the video: $1"
     echo $t
 }
@@ -446,24 +454,28 @@ decode-qrcode-image () {
     rm -f _ __
 
     # resize
-    $(which convert) -resize "${3}x${3}>" $1 __ \
-        || error "occurred problem during resizing QR Code image: $1"
+    $(which convert) -resize "${3}x${3}>" $1 __                              \
+        || warning "failed to resize QR image: $(pwd)/$(basename $1), skip"  \
+        || return 0
 
     # decode each iamge using zbar
-    $(which zbarimg) --raw --quiet -Sbinary __ > _ \
-        || warning "occurred problem during decoding QR Code image: $1" \
+    $(which zbarimg) --raw --quiet -Sbinary __ > _                           \
+        || warning "failed to decode QR image: $(pwd)/$(basename $1), skip"  \
         || return 0
 
     # parse header
     local header=$(cat _ | head -c $HEADER_BYTES)
-    [[ ${#header} -eq $HEADER_BYTES ]] \
-        || error "something wrong with the header: $header"
+    [[ ${#header} -eq $HEADER_BYTES ]]                                       \
+        || warning "wrong header: $header in $(pwd)/$(basename $1), skip"    \
+        || return 0
 
-    stderr-msg 0 -n \
-                 "processing  ${header:0:$HASH_ID_BYTES}" \
-                 "[${header:$HASH_ID_BYTES:$INDEX_BYTES} /" \
-                 "${header:$((HEADER_BYTES-$INDEX_BYTES)):$INDEX_BYTES}]" \
-                 " <<  $(pwd)/$(basename $1)"
+    stderr-msg 0 -n                                                          \
+                 "processing  ${header:0:$HASH_ID_BYTES}"                    \
+                 "[${header:$HASH_ID_BYTES:$INDEX_BYTES}"                    \
+                 "/"                                                         \
+                 "${header:$((HEADER_BYTES-$INDEX_BYTES)):$INDEX_BYTES}]"    \
+                 " << "                                                      \
+                 "$(pwd)/$(basename $1)"
     cat _ | tail -c +$((HEADER_BYTES + 1)) > "$2/$header"
     rm -f _ __
 }
@@ -495,7 +507,8 @@ merge-and-verify-decoded-files () {
 
         warning "still looks like a vaild: $f" \
                 "\n\t\t be aware that the hash is different from the original." \
-                "\n\t\t expected $2, but got $got"
+                "\n\t\t expected $2, but got $got" \
+            || return 0
     fi
 }
 
@@ -553,16 +566,17 @@ decode () {
 print-help () {
     local this=$(basename $0)
     cat << HELP
- qed - encode data of any size into tarballs of QR Code
+ qed - encode data into a tar stream of QR Code images
 
- Usage: $this [-hdpqzv] [-o output] [-V version] [-l error-correction-level]
+ Usage: $this [-hdpqzv] [-o output] [-V version] [-l error-correction-level] [-r framerate]
             [-s cell-size] [-m margin] [-1 qr-fg-color] [-0 qr-bg-color] filepath
 
       -h    print this message
       -d    decode input
-      -p    create QR Code slideshows (mp4) after encoding is finished
+      -p    create QR Code slideshow (mp4) after encoding is finished
       -q    create QR Code quick-view (HTML document) after encoding is finished
       -v    show in detail how the work is progressing
+      -r    set QR code slideshow framerate  (default: $SLIDE_SHOW_FRAMERATE)
       -o    set output filepath              (default: '-' for stdout)
       -s    set cell size of QR Code         (default: $QR_CELL_SIZE)
       -m    set margin of QR Code            (recommended 4+,   default: $QR_MARGIN)
@@ -580,7 +594,7 @@ HELP
 # qed main
 # --------------
 # parsing arguments
-while getopts hdpqvo:s:m:1:0:r:V:l: flag
+while getopts hdpqvo:s:m:1:0:V:l:r: flag
 do
     case "$flag" in
         h) print-help;;
@@ -595,6 +609,7 @@ do
         0) bcolor=${OPTARG};;
         V) version=${OPTARG};;
         l) level=${OPTARG};;
+        r) framerate=${OPTARG};;
     esac
 done
 shift $((OPTIND - 1))
@@ -607,6 +622,7 @@ fcolor=${fcolor:-$QR_FOREGROUND}
 bcolor=${bcolor:-$QR_BACKGROUND}
 version=${version:-$QR_VERSION}
 level=${level:-$QR_ERROR_CORRECTION}
+framerate=${framerate:-$SLIDE_SHOW_FRAMERATE}
 [[ "$out" == "-" ]] && out=
 
 

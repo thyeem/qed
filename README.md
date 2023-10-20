@@ -4,96 +4,79 @@
 
 _Quod Erat Demonstrandum_. _Q.E.D._
 
-__Encode data of any size into a tarball of QR code images.__
+__Encode any data into a tar stream of QR code images.__
 
 Seriously? Yes, we are. `'-']b`
 
-As you know, this is deadly inefficient in terms of _storage_ and _encoding/decoding time_. Due to this inefficiency, it would not be great for simple backup purpose. However, we believe it may have useful uses.
+As you know, this is deadly inefficient in terms of _storage_ and _encoding/decoding time_. Due to this inefficiency, it would not be great for simple backup purpose. However, __we believe it may have useful uses__.
 
 ## Quick Start
-If not provided `-o filepath` option, __output to `stdout` is the default__.
-
-- encoding output: a `tarball` of QR images &ensp;⟹&ensp; `stdout`
-
-- decoding output: contents of `filepath` &ensp;⟹&ensp; `stdout`
-
-    > If there are multiple files in the original file path (e.g., directory), output `stdout` will be sorted by file hash.
-    >
-    > If the -o option is provided, the files are extracted to the specified output directory.
-
-#### Encoding
 ```bash
-# encode FILE via stdin
+# encode stream (stdin) -> tar-stream (stdout)
 $ cat FILE | qed
 
-# encode FILE via argument
-$ qed FILE
+# decode tar-stream (stdin) -> stream of the original contents (stdout)
+$ cat FILE | qed | qed -d
 
-# get encoded QR images in the current dir
-$ qed FILE | tar xv
+# encode FILE_OR_DIR via argument -> tar-stream (stdout)
+$ qed FILE_OR_DIR
 
-# get encoded QR images in the specified DIR
-$ qed FILE | tar xv -C DIR
-
-# get encoded QR images as a tarball, "encoded.tar"
-$ qed FILE > encoded.tar
+# encode FILE_OR_DIR via argument -> filepath of TAR_FILE (stdout)
+$ qed FILE_OR_DIR > TAR_FILE
 
 # the same as above
-$ qed FILE -o encoded.tar
+$ qed -o TAR_FILE FILE_OR_DIR
 
-# create a video (as a QR code slideshow) when encoding is finished
-$ qed -p FILE
+# create a video as a QR code slideshow
+$ qed -p FILE_OR_DIR
 
-# create a HTML of QR code images on browser when encoding is finished
-$ qed -q
+# create a HTML of QR code images
+$ qed -q FILE_OR_DIR
+
+# decode TAR_FILE via argument -> the original data's stream (stdout)
+$ qed -d TAR_FILE
+
+# can also decode a single IMAGE (*.png, *.jpg, ...) -> the original data's stream (stdout)
+$ qed -d IMAGE
+
+# can also decode a single VIDEO (*.mp4, *.mov, ...) -> the original data's stream (stdout)
+$ qed -d VIDEO
+
+# can also decode DIRECTORY conataining IMAGE(s) -> the original data's stream (stdout)
+# data are automatically selected if various kinds of data are mixed.
+$ qed -d DIRECTORY
+
+# decode TAR_FILE via argument -> filepath of a single concatanated file (stdout)
+$ qed -d TAR_FILE > FILE
+
+# decode TAR_FILE via argument -> filepath of NEW_DIR of the original contents (stdout)
+$ qed -d -o NEW_DIR TAR_FILE
+
+# -v increases verbosity. it shows the details how the work is progressing.
+$ qed -v FILE_OR_DIR | qed -dv
 ```
-
-#### Decoding
-```bash
-# decode via stdin (a tarball of QR images)
-$ cat qr_images.tar | qed -d
-
-# decode via argument of a tarball
-$ qed -d qr_images.tar
-
-# decode via argument of a directory of QR code images
-$ qed -d qr_images/
-
-# decode via argument of a single file of QR code
-$ qed -d qr_image.png
-
-# decode via argument of a video (any files encoded via `qed -p`)
-$ qed -d qr_video.mp4
-
-# get decoded original files into the specified file path, "decoded"
-$ qed -d encoded.tar > decoded
-
-# the same as above
-$ qed -d -o decoded encoded.tar
-
-# -v increases verbosity. see the details how the work is progressing.
-$ qed -v FILE | qed -dv
-```
-For more detailed options, refer to the `Usage` section below.
-
-## Demo
-<img src="data/demo.gif" width="540" />
+For more detailed options, refer to the [Usage](https://github.com/thyeem/qed#usage) and [More Examples](https://github.com/thyeem/qed#more-examples) section below.
 
 
 ## Features
-`qed` is heavily inspired by https://github.com/alisinabh/paperify. We have simpified to improve usability and added some features.
+In short, once encoded any data by `qed`, it __can be restored by `qed` at any moment__.
 
-- Fully support for setting [version](https://en.wikipedia.org/wiki/QR_code#Storage) and [error correction level](https://en.wikipedia.org/wiki/QR_code#Error_correction) of the QR code (used `byte-mode` only)
+- __Decodes deterministically__ even in ambiguous or conflicting cases, no matter of
+   * _data duplication_
+   * _filename corruption_
+   * _file unsorting_
+   * _filepath relocation_.
+
+- Fully support for setting [version](https://en.wikipedia.org/wiki/QR_code#Storage) and [error correction level](https://en.wikipedia.org/wiki/QR_code#Error_correction) of the QR code.
 
 - Uses `stdout` by default as encoder/decoder output.
+  > If not provided `-o filepath` option, __output to `stdout` is the default__.
 
 - Creates some bytes of header when encoding, and provides some information when decoding.
 
-- _deterministically decodes even when ambiguous or conflicting_
-  > __No matter of data duplication, filename corruption, file unsorting or filepath relocation__.
-  > (assumed that every header of files is not damaged)
 
-In short, once encoded any data by `qed`, it __can be restored by `qed` at any moment__.
+`qed` is heavily inspired by https://github.com/alisinabh/paperify.
+We have improved usability and added some features.
 
 
 ## Install
@@ -116,38 +99,40 @@ $ sh test.sh
 ## Usage
 ```qed
 $ qed -h
- qed - encode data of any size into tarballs of QR Code
+ qed - encode data into a tar stream of QR Code images
 
- Usage: qed [-hdpqzv] [-o output] [-V version] [-l error-correction-level]
+ Usage: qed [-hdpqzv] [-o output] [-V version] [-l error-correction-level] [-r framerate]
             [-s cell-size] [-m margin] [-1 qr-fg-color] [-0 qr-bg-color] filepath
 
       -h    print this message
       -d    decode input
-      -p    create QR Code slideshows (mp4) after encoding is finished
+      -p    create QR Code slideshow (mp4) after encoding is finished
       -q    create QR Code quick-view (HTML document) after encoding is finished
       -v    show in detail how the work is progressing
+      -r    set QR code slideshow framerate  (default: 1)
       -o    set output filepath              (default: '-' for stdout)
-      -s    set cell size of QR Code         (default: $QR_CELL_SIZE)
-      -m    set margin of QR Code            (recommended 4+,   default: $QR_MARGIN)
-      -V    set version of QR Code           (1 to 40,          default: $QR_VERSION)
-      -l    set error correction level       (one of [L,M,Q,H], default: $QR_ERROR_CORRECTION)
-      -1    set foreground color of QR Code  (6-hexadecimal,    default: $QR_FOREGROUND)
-      -0    set background color of QR Code  (6-hexadecimal,    default: $QR_BACKGROUND)
+      -s    set cell size of QR Code         (default: 13)
+      -m    set margin of QR Code            (recommended 4+,   default: 24)
+      -V    set version of QR Code           (1 to 40,          default: 40)
+      -l    set error correction level       (one of [L,M,Q,H], default: L)
+      -1    set foreground color of QR Code  (6-hexadecimal,    default: 000000)
+      -0    set background color of QR Code  (6-hexadecimal,    default: ffffff)
 ```
 
 
 ## More Examples
-
-In fact, there is no clear reason to use `qed`.
-
-`qed` would say something only when the intermediate result during the process must be `QR codes`.
-
 ```bash
-# compress the QR code tarball after encoding
-$ cat FILE | qed | gzip -c > outfile.tar.gz
+# get the encoding result of QR images in the current dir
+$ qed FILE_OR_DIR | tar xv
 
-# uncompress the tar.gz archive then decode. go back to FILE again (stdout)
-$ gunzip -c outfile.tar.gz | qed -d
+# get the encoding result of QR images in the specified DIR
+$ qed FILE_OR_DIR | tar xv -C DIR
+
+# compress the QR code tarball after encoding
+$ cat FILE | qed | gzip -c > tmp.tar.gz
+
+# uncompress the tar.gz archive then decode. go back to FILE again
+$ gunzip -c tmp.tar.gz | qed -d
 
 # create and play a mp4 video (QR code slideshow) when encoding is finished
 $ qed -p FILE | xargs open
@@ -155,31 +140,19 @@ $ qed -p FILE | xargs open
 # create and open QR code images on browser when encoding is finished
 $ qed -q FILE | xargs open
 
-# if you want both
-$ qed -pq FILE
+# stream -> tar stream -> stream
+$ curl -sL https://google.com | qed | qed -d
 
-# identity transform
-$ cat FILE | qed | qed -d
+# stream -> QR-image mp4 file -> stream
+$ curl -sL https://google.com | qed -p | xargs qed -d
 
-# the same
-$ qed FILE | qed -d
+# FILE_OR_DIR -> tar stream -> NEW_DIR of the original contents
+$ qed FILE_OR_DIR | qed -d -o NEW_DIR
 
-# the same, but arguments used
-$ qed -o outfile.tar FILE | xargs cat | qed -d
+# with other encoder
+$ echo "QED: QR.Encoder.Decoder" | base64 | qed | qed -d | base64 -d
 
-# stop COVID-19
-$ echo "stop COVID-19" | base64 | qed | qed -d | base64 -d
-
-# backing up directories (who cares?)
+# backing up directory with qed: does the same thing as tar
+# $ tar -cvf - FROM_DIR | tar -xv -C TO_DIR
 $ qed -v FROM_DIR | qed -dv -o TO_DIR
-
-# the method above exactly the same as below. but the above was done via QR encoding/decoding.
-$ tar -cvf - FROM_DIR | tar -xv -C TO_DIR
-
-# open the github webpage and save the html file as mp4-QR-slides (who cares?)
-# 'browser' pipes stdout to web browser
-$ curl -sL https://github.com | qed -pv | qed -dv | browser
-
-# encode/decode with full of options
-$ qed -pq -s 16 -m 16 -1 333333 -0 e0ffff -v 30 -l M -o /tmp/tmp FILE | qed -d
 ```
