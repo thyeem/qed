@@ -319,9 +319,15 @@ check-if-video () {
 create-video () {
     # -> void
     # <- $1: video-file-basename
+
+    local a=$(ls -1 *.png | head -1)
+    local z=$(ls -1 *.png | tail -1)
+    cp -f $a "0_$a" && cp -f $a "1_$a"
+    cp -f $z "z_$z" && cp -f $z "y_$z"
+
     local mp4="$1.mp4"
     local n=$(ls -1 *.png | wc -l)
-    local t=$(echo "scale=0;$n/$framerate+3" | bc)
+    local t=$(echo "scale=0;$n/$framerate+4" | bc)
     local stats=
     [[ -n $verbose ]] && stats="-stats"
 
