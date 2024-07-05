@@ -460,12 +460,12 @@ decode-qrcode-image () {
     rm -f _ __
 
     # resize
-    $(which convert) -resize "${3}x${3}>" $1 __                              \
+    $(which convert) -resize "${3}x${3}>" $1 __ 2>/dev/null                  \
         || warning "failed to resize QR image: $(pwd)/$(basename $1), skip"  \
         || return 0
 
     # decode each iamge using zbar
-    $(which zbarimg) --raw --quiet -Sbinary __ > _                           \
+    $(which zbarimg) --raw --quiet -Sbinary __ > _ 2>/dev/null               \
         || warning "failed to decode QR image: $(pwd)/$(basename $1), skip"  \
         || return 0
 
